@@ -1,0 +1,58 @@
+import json
+import os
+import yfinance as yf
+from datetime import datetime
+from modules.telegram_bot import notify_target_hit, notify_stop_loss
+
+TRADE_HISTORY_FILE = "data/trade_history.json"
+
+def check_targets():
+    """فحص تحقيق الأهداف ووقف الخسارة لجميع الأسهم"""
+    if not os.path.exists(TRADE_HISTORY_FILE):
+        return
+
+    with open(TRADE_HISTORY_FILE, "r", encoding="utf-8") as f:
+        trades = json.load(f)
+
+    for trade in trades:
+        symbol = trade["symbol"]
+        entry_price = float(trade["entry_price"])
+        target1 = entry_price * 1.1
+        target2 = entry_price * 1.25
+        stop_loss = entry_price * 0.85
+
+        try:
+            stock = yf.Ticker(symbol)
+            current_price = stock.history(period="1d")["Close"].iloc[-1]
+
+            # فحص تحقيق الأهداف
+            if current_price >= target2 and not trade.get("target2_hit", False):
+                notify_target_hit({
+                    "symbol": symbol,
+                    "current_price": current_price,
+                    "profit": ((current_price - entry_price) / entry_price) * 100
+                }, "target2")
+                trade["target2_hit"] = True
+            elif current_price >= target1 and not trade.get("target1_hit", False):
+                notify_target_hit({
+                    "symbol": symbol,
+                    "current_price": current_price,
+                    "profit": ((current_price - entry_price) / entry_price) * 100
+                }, "target1")
+                trade["target1_hit"] = True
+
+            # فحص وقف الخسارة
+            if current_price <= stop_loss and not trade.get("stop_loss_hit", False):
+                notify_stop_loss({
+                    "symbol": symbol,
+                    "current_price": current_price,
+                    "distance_to_sl": ((current_price - stop_loss) / stop_loss) * 100
+                })
+                trade["stop_loss_hit"] = True
+
+        except Exception as e:
+            print(f"❌ خطأ في تتبع سعر {symbol}: {e}")
+
+    # حفظ التحديثات
+    with open(TRADE_HISTORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(trades, f, indent=2, ensure_ascii=False)
