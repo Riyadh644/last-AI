@@ -371,11 +371,11 @@ async def send_performance_report():
             except Exception as e:
                 print(f"⚠️ فشل إرسال التقرير: {e}")
 
-def start_telegram_bot():
+async def start_telegram_bot():
     while True:
         try:
             app = ApplicationBuilder().token(BOT_TOKEN).build()
-            
+
             app.add_handler(CommandHandler("start", start))
             app.add_handler(MessageHandler(filters.Regex("(?i)^🌀"), top_stocks))
             app.add_handler(MessageHandler(filters.Regex("(?i)^💥"), pump_stocks))
@@ -385,7 +385,10 @@ def start_telegram_bot():
             app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, analyze_stock))
 
             print("✨ بوت التليجرام يعمل الآن!")
-            app.run_polling()
+            await app.run_polling()   # ✅ هنا صححناها
         except Exception as e:
             print(f"⚠️ خطأ في البوت: {e}")
-            time.sleep(10)
+            await asyncio.sleep(10)
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(start_telegram_bot())
