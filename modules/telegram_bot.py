@@ -9,6 +9,8 @@ import time
 import numpy as np
 from datetime import datetime
 import requests
+import asyncio
+from telegram.ext import ApplicationBuilder
 
 from modules.tv_data import analyze_market, fetch_data_from_tradingview
 from modules.ml_model import load_model, predict_buy_signal
@@ -372,23 +374,22 @@ async def send_performance_report():
                 print(f"⚠️ فشل إرسال التقرير: {e}")
 
 async def start_telegram_bot():
-    while True:
-        try:
-            app = ApplicationBuilder().token(BOT_TOKEN).build()
+    try:
+        app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-            app.add_handler(CommandHandler("start", start))
-            app.add_handler(MessageHandler(filters.Regex("(?i)^🌀"), top_stocks))
-            app.add_handler(MessageHandler(filters.Regex("(?i)^💥"), pump_stocks))
-            app.add_handler(MessageHandler(filters.Regex("(?i)^🚀"), high_movement_stocks))
-            app.add_handler(MessageHandler(filters.Regex("(?i)^🔄"), update_symbols_now))
-            app.add_handler(MessageHandler(filters.Regex("(?i)^📊"), show_daily_report))
-            app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, analyze_stock))
+        app.add_handler(CommandHandler("start", start))
+        app.add_handler(MessageHandler(filters.Regex("(?i)^🌀"), top_stocks))
+        app.add_handler(MessageHandler(filters.Regex("(?i)^💥"), pump_stocks))
+        app.add_handler(MessageHandler(filters.Regex("(?i)^🚀"), high_movement_stocks))
+        app.add_handler(MessageHandler(filters.Regex("(?i)^🔄"), update_symbols_now))
+        app.add_handler(MessageHandler(filters.Regex("(?i)^📊"), show_daily_report))
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, analyze_stock))
 
-            print("✨ بوت التليجرام يعمل الآن!")
-            await app.run_polling()   # ✅ هنا صححناها
-        except Exception as e:
-            print(f"⚠️ خطأ في البوت: {e}")
-            await asyncio.sleep(10)
+        print("✨ بوت التليجرام يعمل الآن!")
+        await app.run_polling()
+    except Exception as e:
+        print(f"⚠️ خطأ في البوت: {e}")
+        await asyncio.sleep(10)
 if __name__ == "__main__":
     import asyncio
     asyncio.run(start_telegram_bot())
