@@ -9,6 +9,7 @@ import threading
 import yfinance as yf
 import requests
 from datetime import datetime
+import asyncio
 
 from modules.analyze_performance import generate_report_summary
 from modules.tv_data import analyze_market, analyze_single_stock, fetch_stocks_from_tradingview, analyze_high_movement_stocks
@@ -181,7 +182,8 @@ def send_daily_report():
 def run_bot():
     def bot_thread():
         log("🤖 بوت التليجرام يعمل...")
-        start_telegram_bot()
+        asyncio.run(start_telegram_bot())
+
     thread = threading.Thread(target=bot_thread, daemon=True)
     thread.start()
 
