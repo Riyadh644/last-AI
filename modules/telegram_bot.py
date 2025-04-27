@@ -386,13 +386,16 @@ async def start_telegram_bot():
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, analyze_stock))
 
         print("✨ بوت التليجرام يعمل الآن!")
-        await app.run_polling()  # هنا تمام
+
+        await app.initialize()        # تهيئة التطبيق
+        await app.start()              # بدء التشغيل
+        await app.updater.start_polling()  # بدء استقبال الرسائل
+        await app.updater.idle()       # انتظار حتى إيقاف البوت
+
     except Exception as e:
         print(f"⚠️ خطأ في البوت: {e}")
         await asyncio.sleep(10)
 
-# 🚀 شغل الكوروتين بشكل صحيح بالسيرفر:
-asyncio.get_event_loop().create_task(start_telegram_bot())
-
-# وخلي السيرفر شغال بشكل مستمر:
-asyncio.get_event_loop().run_forever()
+# 🚀 شغل البوت
+if __name__ == "__main__":
+    asyncio.run(start_telegram_bot())
