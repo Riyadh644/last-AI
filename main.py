@@ -1,16 +1,19 @@
 import os
-import time
 import json
 import logging
-import schedule
 import asyncio
-import nest_asyncio
+import schedule
 import yfinance as yf
 import requests
+import nest_asyncio
 from datetime import datetime
 
+from telegram import Bot
 from modules.analyze_performance import generate_report_summary
-from modules.tv_data import analyze_market, analyze_single_stock, fetch_stocks_from_tradingview, analyze_high_movement_stocks
+from modules.tv_data import (
+    analyze_market, analyze_single_stock, 
+    fetch_stocks_from_tradingview, analyze_high_movement_stocks
+)
 from modules.ml_model import train_model_daily
 from modules.symbols_updater import fetch_all_us_symbols, save_symbols_to_csv
 from modules.telegram_bot import (
@@ -22,8 +25,7 @@ from modules.telegram_bot import (
 from modules.pump_detector import detect_pump_stocks
 from modules.price_tracker import check_targets
 
-from telegram import Bot
-
+# تفعيل دعم التزامن داخل التزامن
 nest_asyncio.apply()
 
 # إعدادات عامة
@@ -31,8 +33,8 @@ NEWS_API_KEY = "BpXXFMPQ3JdCinpg81kfn4ohvmnhGZOwEmHjLIre"
 POSITIVE_NEWS_FILE = "data/positive_watchlist.json"
 BOT_TOKEN = "7740179871:AAFYnS_QS595Gw5uRTMuW8N9ajUB4pK4tJ0"
 
-if not os.path.exists("logs"):
-    os.makedirs("logs")
+# إنشاء مجلد السجلات إن لم يكن موجوداً
+os.makedirs("logs", exist_ok=True)
 
 logging.basicConfig(
     filename="logs/bot.log",
@@ -67,23 +69,18 @@ def watch_positive_news_stocks():
         stocks = fetch_stocks_from_tradingview()
         positive_stocks = []
 
-        old_list = []
+        old_symbols = []
         if os.path.exists(POSITIVE_NEWS_FILE):
             with open(POSITIVE_NEWS_FILE, "r", encoding="utf-8") as f:
                 old_list = json.load(f)
             old_symbols = [s["symbol"] for s in old_list]
-        else:
-            old_symbols = []
 
         for stock in stocks:
             symbol = stock["symbol"]
             sentiment = fetch_news_sentiment(symbol)
-            if sentiment == "positive":
-                if symbol not in old_symbols:
-                    msg = f"""📢 سهم جديد بأخبار إيجابية:
-📈 {symbol}
-✅ تم رصده في السوق"""
-                    send_telegram_message(msg)
+            if sentiment == "positive" and symbol not in old_symbols:
+                message = f"📢 سهم جديد بأخبار إيجابية:\n📈 {symbol}\n✅ تم رصده في السوق"
+                send_telegram_message(message)
                 log(f"✅ {symbol} لديه أخبار إيجابية.")
                 positive_stocks.append(stock)
 
@@ -102,9 +99,9 @@ def is_market_weak():
         spy = yf.Ticker("SPY")
         hist = spy.history(period="2d")
         if len(hist) >= 2:
-            prev = hist["Close"].iloc[-2]
-            today = hist["Close"].iloc[-1]
-            change_pct = (today - prev) / prev * 100
+            prev_close = hist["Close"].iloc[-2]
+            today_close = hist["Close"].iloc[-1]
+            change_pct = (today_close - prev_close) / prev_close * 100
             return change_pct < -1
     except Exception as e:
         log(f"❌ خطأ في تحليل SPY: {e}")
@@ -124,10 +121,10 @@ def update_market_data():
         final_stocks = []
         for stock in stocks:
             sentiment = fetch_news_sentiment(stock["symbol"])
-            if sentiment == "negative":
+            if sentiment != "negative":
+                final_stocks.append(stock)
+            else:
                 log(f"⚠️ تم تجاهل {stock['symbol']} بسبب أخبار سلبية.")
-                continue
-            final_stocks.append(stock)
         log(f"✅ تحليل مكتمل: {len(final_stocks)} سهم بعد فلترة الأخبار.")
     except Exception as e:
         log(f"❌ فشل تحليل السوق: {e}")
@@ -179,7 +176,7 @@ async def send_daily_report():
     except Exception as e:
         log(f"❌ فشل إرسال التقرير اليومي: {e}")
 
-async def run_scheduled_jobs(bot_instance):
+async def run_scheduled_jobs(bot):
     while True:
         schedule.run_pending()
         await asyncio.sleep(1)
@@ -187,7 +184,7 @@ async def run_scheduled_jobs(bot_instance):
 async def main():
     bot_instance = Bot(token=BOT_TOKEN)
 
-    # المهام المجدولة
+    # جدولة المهام
     daily_model_training()
     update_market_data()
     update_pump_stocks()
@@ -203,7 +200,7 @@ async def main():
     schedule.every(10).minutes.do(watch_positive_news_stocks)
     schedule.every().day.at("16:00").do(lambda: asyncio.create_task(send_daily_report()))
 
-    # شغل البوت والمهام المجدولة
+    # تشغيل بوت التليجرام والمهام المجدولة معًا
     bot_task = asyncio.create_task(start_telegram_bot())
     schedule_task = asyncio.create_task(run_scheduled_jobs(bot_instance))
 
