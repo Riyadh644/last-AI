@@ -5,7 +5,6 @@ import logging
 import schedule
 import asyncio
 import nest_asyncio
-import threading
 import yfinance as yf
 import requests
 from datetime import datetime
@@ -180,36 +179,35 @@ async def send_daily_report():
     except Exception as e:
         log(f"❌ فشل إرسال التقرير اليومي: {e}")
 
-def run_bot():
-    def bot_thread():
-        log("🤖 بوت التليجرام يعمل...")
-        asyncio.run(start_telegram_bot())
-    thread = threading.Thread(target=bot_thread, daemon=True)
-    thread.start()
+async def run_scheduled_jobs(bot_instance):
+    while True:
+        schedule.run_pending()
+        await asyncio.sleep(1)
 
-# تشغيل المهام الدورية
-bot_instance = Bot(token=BOT_TOKEN)
+async def main():
+    bot_instance = Bot(token=BOT_TOKEN)
 
-def scheduled_tasks():
-    asyncio.run(track_targets(bot_instance))
-    asyncio.run(run_smart_alerts(bot_instance))
+    # المهام المجدولة
+    daily_model_training()
+    update_market_data()
+    update_pump_stocks()
+    update_high_movement_stocks()
 
-daily_model_training()
-update_market_data()
-update_pump_stocks()
-update_high_movement_stocks()
+    schedule.every().day.at("00:00").do(daily_model_training)
+    schedule.every().day.at("03:00").do(update_symbols)
+    schedule.every(5).minutes.do(update_market_data)
+    schedule.every(5).minutes.do(update_pump_stocks)
+    schedule.every(5).minutes.do(update_high_movement_stocks)
+    schedule.every(5).minutes.do(lambda: asyncio.create_task(track_targets(bot_instance)))
+    schedule.every(5).minutes.do(lambda: asyncio.create_task(run_smart_alerts(bot_instance)))
+    schedule.every(10).minutes.do(watch_positive_news_stocks)
+    schedule.every().day.at("16:00").do(lambda: asyncio.create_task(send_daily_report()))
 
-schedule.every().day.at("00:00").do(daily_model_training)
-schedule.every().day.at("03:00").do(update_symbols)
-schedule.every(5).minutes.do(update_market_data)
-schedule.every(5).minutes.do(update_pump_stocks)
-schedule.every(5).minutes.do(update_high_movement_stocks)
-schedule.every(5).minutes.do(scheduled_tasks)
-schedule.every(10).minutes.do(watch_positive_news_stocks)
-schedule.every().day.at("16:00").do(lambda: asyncio.run(send_daily_report()))
+    # شغل البوت والمهام المجدولة
+    bot_task = asyncio.create_task(start_telegram_bot())
+    schedule_task = asyncio.create_task(run_scheduled_jobs(bot_instance))
 
-run_bot()
+    await asyncio.gather(bot_task, schedule_task)
 
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+if __name__ == "__main__":
+    asyncio.run(main())
