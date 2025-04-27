@@ -156,7 +156,7 @@ async def notify_target_hit(bot, stock, target_type):
         message = f"""
 🎯🎯 <b>🌟 هدف ثاني محقق</b> 🎯🎯
 
-🌈 <code>{stock['symbol']}</code>
+ <code>{stock['symbol']}</code>
 💰 <b>الدخول:</b> {stock['entry_price']:.2f} $
 📈 <b>الحالي:</b> {stock['current_price']:.2f} $
 
