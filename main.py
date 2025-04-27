@@ -9,7 +9,6 @@ import threading
 import yfinance as yf
 import requests
 from datetime import datetime
-import asyncio
 
 from modules.analyze_performance import generate_report_summary
 from modules.tv_data import analyze_market, analyze_single_stock, fetch_stocks_from_tradingview, analyze_high_movement_stocks
@@ -24,10 +23,14 @@ from modules.telegram_bot import (
 from modules.pump_detector import detect_pump_stocks
 from modules.price_tracker import check_targets
 
+from telegram import Bot
+
 nest_asyncio.apply()
 
+# إعدادات عامة
 NEWS_API_KEY = "BpXXFMPQ3JdCinpg81kfn4ohvmnhGZOwEmHjLIre"
 POSITIVE_NEWS_FILE = "data/positive_watchlist.json"
+BOT_TOKEN = "7740179871:AAFYnS_QS595Gw5uRTMuW8N9ajUB4pK4tJ0"
 
 if not os.path.exists("logs"):
     os.makedirs("logs")
@@ -156,26 +159,24 @@ def update_high_movement_stocks():
     except Exception as e:
         log(f"❌ فشل تحليل الأسهم ذات الحركة العالية: {e}")
 
-def track_targets():
+async def track_targets(bot):
     log("🎯 متابعة لحظية للأسهم...")
     try:
-        check_targets()
+        await check_targets(bot)
     except Exception as e:
         log(f"❌ خطأ في متابعة الأهداف: {e}")
 
-def run_smart_alerts():
+async def run_smart_alerts(bot):
     log("🔔 فحص التغيرات في الأسهم...")
     try:
-        from telegram import Bot
-        bot = Bot(token="7740179871:AAFYnS_QS595Gw5uRTMuW8N9ajUB4pK4tJ0")
-        asyncio.run(compare_stock_lists_and_alert(bot))
+        await compare_stock_lists_and_alert(bot)
     except Exception as e:
         log(f"❌ فشل إرسال التنبيهات الذكية: {e}")
 
-def send_daily_report():
+async def send_daily_report():
     log("📊 إرسال التقرير اليومي...")
     try:
-        asyncio.run(send_performance_report())
+        await send_performance_report()
     except Exception as e:
         log(f"❌ فشل إرسال التقرير اليومي: {e}")
 
@@ -183,11 +184,16 @@ def run_bot():
     def bot_thread():
         log("🤖 بوت التليجرام يعمل...")
         asyncio.run(start_telegram_bot())
-
     thread = threading.Thread(target=bot_thread, daemon=True)
     thread.start()
 
-# الجدول الزمني للمهام
+# تشغيل المهام الدورية
+bot_instance = Bot(token=BOT_TOKEN)
+
+def scheduled_tasks():
+    asyncio.run(track_targets(bot_instance))
+    asyncio.run(run_smart_alerts(bot_instance))
+
 daily_model_training()
 update_market_data()
 update_pump_stocks()
@@ -198,10 +204,9 @@ schedule.every().day.at("03:00").do(update_symbols)
 schedule.every(5).minutes.do(update_market_data)
 schedule.every(5).minutes.do(update_pump_stocks)
 schedule.every(5).minutes.do(update_high_movement_stocks)
-schedule.every(5).minutes.do(track_targets)
-schedule.every(5).minutes.do(run_smart_alerts)
+schedule.every(5).minutes.do(scheduled_tasks)
 schedule.every(10).minutes.do(watch_positive_news_stocks)
-schedule.every().day.at("16:00").do(send_daily_report)
+schedule.every().day.at("16:00").do(lambda: asyncio.run(send_daily_report()))
 
 run_bot()
 
