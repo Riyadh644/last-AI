@@ -79,7 +79,7 @@ def watch_positive_news_stocks():
             symbol = stock["symbol"]
             sentiment = fetch_news_sentiment(symbol)
             if sentiment == "positive" and symbol not in old_symbols:
-                message = f"📢 سهم جديد بأخبار إيجابية:\n📈 {symbol}\n✅ تم رصده في السوق"
+                message = f"\ud83d\udce2 سهم جديد بأخبار إيجابية:\n\ud83d\udcc8 {symbol}\n✅ تم رصده في السوق"
                 send_telegram_message(message)
                 log(f"✅ {symbol} لديه أخبار إيجابية.")
                 positive_stocks.append(stock)
@@ -184,7 +184,6 @@ async def run_scheduled_jobs(bot):
 async def main():
     bot_instance = Bot(token=BOT_TOKEN)
 
-    # جدولة المهام
     daily_model_training()
     update_market_data()
     update_pump_stocks()
@@ -200,7 +199,6 @@ async def main():
     schedule.every(10).minutes.do(watch_positive_news_stocks)
     schedule.every().day.at("16:00").do(lambda: asyncio.create_task(send_daily_report()))
 
-    # ✅ هنا التصحيح: انتظر البوت + الجدولة معاً بشكل نظيف
     await asyncio.gather(
         start_telegram_bot(),
         run_scheduled_jobs(bot_instance)
