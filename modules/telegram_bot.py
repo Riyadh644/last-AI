@@ -10,7 +10,7 @@ import numpy as np
 from datetime import datetime
 import requests
 import asyncio
-from telegram.ext import ApplicationBuilder
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
 
 from modules.tv_data import analyze_market, fetch_data_from_tradingview
 from modules.ml_model import load_model, predict_buy_signal
@@ -386,10 +386,9 @@ async def start_telegram_bot():
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, analyze_stock))
 
         print("✨ بوت التليجرام يعمل الآن!")
-        await app.run_polling()
+        await app.run_polling()  # هنا لازم "await"
     except Exception as e:
         print(f"⚠️ خطأ في البوت: {e}")
-        await asyncio.sleep(10)
+        await asyncio.sleep(10)  # هنا await برضو
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(start_telegram_bot())
