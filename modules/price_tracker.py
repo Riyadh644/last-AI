@@ -11,12 +11,20 @@ def is_market_open():
     now = datetime.utcnow()
     return now.weekday() < 5 and 13 <= now.hour <= 20  # توقيت UTC للسوق الأمريكي
 
+def is_today(timestamp_str):
+    """تحقق أن السهم مضاف اليوم فقط"""
+    try:
+        entry_date = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S").date()
+        today_date = datetime.utcnow().date()
+        return entry_date == today_date
+    except:
+        return False
+
 async def check_targets(bot):
-    """فحص تحقيق الأهداف ووقف الخسارة لجميع الأسهم"""
+    """فحص تحقيق الأهداف ووقف الخسارة لجميع الأسهم الحالية"""
     if not os.path.exists(TRADE_HISTORY_FILE):
         return
 
-    # 🔒 تأكد أن السوق مفتوح قبل أي فحص
     if not is_market_open():
         print("⏸️ السوق مغلق، لن يتم متابعة الأهداف حالياً.")
         return
@@ -27,6 +35,15 @@ async def check_targets(bot):
     for trade in trades:
         symbol = trade["symbol"]
         entry_price = float(trade["entry_price"])
+        timestamp = trade.get("timestamp", "")
+
+        # 🛡️ تأكد أن الصفقة اليوم فقط
+        if not is_today(timestamp):
+            continue
+
+        if entry_price == 0:
+            continue
+
         target1 = entry_price * 1.1
         target2 = entry_price * 1.25
         stop_loss = entry_price * 0.85
@@ -37,10 +54,6 @@ async def check_targets(bot):
             if history.empty:
                 continue
             current_price = history["Close"].iloc[-1]
-
-            # تأكد أن السعر الابتدائي ليس صفر لتجنب قسمة صفرية
-            if entry_price == 0:
-                continue
 
             # فحص تحقيق الأهداف
             if current_price >= target2 and not trade.get("target2_hit", False):

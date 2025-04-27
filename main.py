@@ -197,7 +197,7 @@ async def main():
     schedule.every(5).minutes.do(lambda: asyncio.create_task(track_targets(bot_instance)))
     schedule.every(5).minutes.do(lambda: asyncio.create_task(run_smart_alerts(bot_instance)))
     schedule.every(10).minutes.do(watch_positive_news_stocks)
-    schedule.every().day.at("16:00").do(lambda: asyncio.create_task(send_daily_report()))
+    schedule.every().day.at("20:00").do(lambda: asyncio.create_task(send_daily_report()))
 
     await asyncio.gather(
         start_telegram_bot(),
