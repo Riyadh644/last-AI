@@ -6,9 +6,19 @@ from modules.telegram_bot import notify_target_hit, notify_stop_loss
 
 TRADE_HISTORY_FILE = "data/trade_history.json"
 
+def is_market_open():
+    """التأكد أن السوق الأمريكي مفتوح"""
+    now = datetime.utcnow()
+    return now.weekday() < 5 and 13 <= now.hour <= 20  # توقيت UTC للسوق الأمريكي
+
 async def check_targets(bot):
     """فحص تحقيق الأهداف ووقف الخسارة لجميع الأسهم"""
     if not os.path.exists(TRADE_HISTORY_FILE):
+        return
+
+    # 🔒 تأكد أن السوق مفتوح قبل أي فحص
+    if not is_market_open():
+        print("⏸️ السوق مغلق، لن يتم متابعة الأهداف حالياً.")
         return
 
     with open(TRADE_HISTORY_FILE, "r", encoding="utf-8") as f:
