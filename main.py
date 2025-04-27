@@ -200,11 +200,11 @@ async def main():
     schedule.every(10).minutes.do(watch_positive_news_stocks)
     schedule.every().day.at("16:00").do(lambda: asyncio.create_task(send_daily_report()))
 
-    # تشغيل بوت التليجرام والمهام المجدولة معًا
-    bot_task = asyncio.create_task(start_telegram_bot())
-    schedule_task = asyncio.create_task(run_scheduled_jobs(bot_instance))
-
-    await asyncio.gather(bot_task, schedule_task)
+    # ✅ هنا التصحيح: انتظر البوت + الجدولة معاً بشكل نظيف
+    await asyncio.gather(
+        start_telegram_bot(),
+        run_scheduled_jobs(bot_instance)
+    )
 
 if __name__ == "__main__":
     asyncio.run(main())
