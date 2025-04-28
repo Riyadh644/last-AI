@@ -6,12 +6,12 @@ import schedule
 import yfinance as yf
 import requests
 import nest_asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from telegram import Bot
 from modules.analyze_performance import generate_report_summary
 from modules.tv_data import (
-    analyze_market, analyze_single_stock, 
+    analyze_market, analyze_single_stock,
     fetch_stocks_from_tradingview, analyze_high_movement_stocks
 )
 from modules.ml_model import train_model_daily
@@ -23,9 +23,9 @@ from modules.telegram_bot import (
     send_telegram_message
 )
 from modules.pump_detector import detect_pump_stocks
-from modules.price_tracker import check_targets
+from modules.price_tracker import check_targets, clean_old_trades
 
-# تفعيل دعم التزامن داخل التزامن
+# تفعيل دعم التزامن
 nest_asyncio.apply()
 
 # إعدادات عامة
@@ -33,7 +33,6 @@ NEWS_API_KEY = "BpXXFMPQ3JdCinpg81kfn4ohvmnhGZOwEmHjLIre"
 POSITIVE_NEWS_FILE = "data/positive_watchlist.json"
 BOT_TOKEN = "7326658749:AAFqhl8U5t_flhDhr2prAzfjZtEdcCKYdsg"
 
-# إنشاء مجلد السجلات إن لم يكن موجوداً
 os.makedirs("logs", exist_ok=True)
 
 logging.basicConfig(
@@ -45,6 +44,23 @@ logging.basicConfig(
 def log(msg):
     print(msg)
     logging.info(msg)
+
+def is_market_open():
+    now = datetime.utcnow()
+    return now.weekday() < 5 and 13 <= now.hour <= 20  # بتوقيت UTC
+
+def is_market_weak():
+    try:
+        spy = yf.Ticker("SPY")
+        hist = spy.history(period="2d")
+        if len(hist) >= 2:
+            prev_close = hist["Close"].iloc[-2]
+            today_close = hist["Close"].iloc[-1]
+            change_pct = (today_close - prev_close) / prev_close * 100
+            return change_pct < -1
+    except Exception as e:
+        log(f"❌ خطأ في تحليل SPY: {e}")
+    return False
 
 def fetch_news_sentiment(symbol):
     try:
@@ -79,9 +95,8 @@ def watch_positive_news_stocks():
             symbol = stock["symbol"]
             sentiment = fetch_news_sentiment(symbol)
             if sentiment == "positive" and symbol not in old_symbols:
-                message = f"\ud83d\udce2 سهم جديد بأخبار إيجابية:\n\ud83d\udcc8 {symbol}\n✅ تم رصده في السوق"
+                message = f"📢 سهم جديد بأخبار إيجابية:\n📈 {symbol}\n✅ تم رصده في السوق"
                 send_telegram_message(message)
-                log(f"✅ {symbol} لديه أخبار إيجابية.")
                 positive_stocks.append(stock)
 
         if positive_stocks:
@@ -94,60 +109,47 @@ def watch_positive_news_stocks():
     except Exception as e:
         log(f"❌ فشل في مراقبة الأخبار الإيجابية: {e}")
 
-def is_market_weak():
-    try:
-        spy = yf.Ticker("SPY")
-        hist = spy.history(period="2d")
-        if len(hist) >= 2:
-            prev_close = hist["Close"].iloc[-2]
-            today_close = hist["Close"].iloc[-1]
-            change_pct = (today_close - prev_close) / prev_close * 100
-            return change_pct < -1
-    except Exception as e:
-        log(f"❌ خطأ في تحليل SPY: {e}")
-    return False
-
-def daily_model_training():
+async def daily_model_training():
     log("🔁 تدريب يومي للنموذج الذكي...")
     train_model_daily()
 
-def update_market_data():
+async def update_market_data():
+    if not is_market_open():
+        log("⏸️ السوق مغلق - إلغاء التحديث")
+        return
+    if is_market_weak():
+        log("⚠️ السوق ضعيف (SPY < -1%). تم إلغاء التوصيات.")
+        return
     log("📊 تحديث بيانات السوق...")
     try:
-        if is_market_weak():
-            log("⚠️ السوق ضعيف (SPY < -1%). تم إلغاء التوصيات.")
-            return
         stocks = analyze_market()
-        final_stocks = []
-        for stock in stocks:
-            sentiment = fetch_news_sentiment(stock["symbol"])
-            if sentiment != "negative":
-                final_stocks.append(stock)
-            else:
-                log(f"⚠️ تم تجاهل {stock['symbol']} بسبب أخبار سلبية.")
-        log(f"✅ تحليل مكتمل: {len(final_stocks)} سهم بعد فلترة الأخبار.")
+        log(f"✅ تحليل مكتمل: {len(stocks)} سهم بعد الفلترة.")
     except Exception as e:
         log(f"❌ فشل تحليل السوق: {e}")
 
-def update_symbols():
-    log("🔁 تحديث رموز السوق من NASDAQ الرسمي...")
+async def update_symbols():
+    log("🔁 تحديث رموز السوق...")
     try:
         symbols = fetch_all_us_symbols()
         if symbols:
             save_symbols_to_csv(symbols)
             log(f"✅ تم تحديث {len(symbols)} رمز سوق.")
     except Exception as e:
-        log(f"❌ فشل في تحديث الرموز: {e}")
+        log(f"❌ فشل تحديث الرموز: {e}")
 
-def update_pump_stocks():
+async def update_pump_stocks():
+    if not is_market_open():
+        return
     log("💣 تحليل الانفجارات السعرية...")
     try:
         detect_pump_stocks()
-        log("✅ تم تحديث أسهم الانفجار السعرية.")
+        log("✅ تم تحديث أسهم الانفجار.")
     except Exception as e:
         log(f"❌ فشل تحليل الانفجارات: {e}")
 
-def update_high_movement_stocks():
+async def update_high_movement_stocks():
+    if not is_market_open():
+        return
     log("🚀 تحليل الأسهم ذات الحركة العالية...")
     try:
         analyze_high_movement_stocks()
@@ -169,12 +171,14 @@ async def run_smart_alerts(bot):
     except Exception as e:
         log(f"❌ فشل إرسال التنبيهات الذكية: {e}")
 
-async def send_daily_report():
-    log("📊 إرسال التقرير اليومي...")
-    try:
-        await send_performance_report()
-    except Exception as e:
-        log(f"❌ فشل إرسال التقرير اليومي: {e}")
+async def send_daily_report_task():
+    if is_market_open():
+        log("⏸️ السوق مفتوح - تأجيل إرسال التقرير")
+        return
+    await send_performance_report()
+
+async def clean_trade_history_task():
+    clean_old_trades()
 
 async def run_scheduled_jobs(bot):
     while True:
@@ -184,20 +188,21 @@ async def run_scheduled_jobs(bot):
 async def main():
     bot_instance = Bot(token=BOT_TOKEN)
 
-    daily_model_training()
-    update_market_data()
-    update_pump_stocks()
-    update_high_movement_stocks()
+    await daily_model_training()
+    await update_market_data()
+    await update_pump_stocks()
+    await update_high_movement_stocks()
 
-    schedule.every().day.at("00:00").do(daily_model_training)
-    schedule.every().day.at("03:00").do(update_symbols)
-    schedule.every(5).minutes.do(update_market_data)
-    schedule.every(5).minutes.do(update_pump_stocks)
-    schedule.every(5).minutes.do(update_high_movement_stocks)
+    schedule.every().day.at("00:00").do(lambda: asyncio.create_task(daily_model_training()))
+    schedule.every().day.at("03:00").do(lambda: asyncio.create_task(update_symbols()))
+    schedule.every(5).minutes.do(lambda: asyncio.create_task(update_market_data()))
+    schedule.every(5).minutes.do(lambda: asyncio.create_task(update_pump_stocks()))
+    schedule.every(5).minutes.do(lambda: asyncio.create_task(update_high_movement_stocks()))
     schedule.every(5).minutes.do(lambda: asyncio.create_task(track_targets(bot_instance)))
     schedule.every(5).minutes.do(lambda: asyncio.create_task(run_smart_alerts(bot_instance)))
     schedule.every(10).minutes.do(watch_positive_news_stocks)
-    schedule.every().day.at("20:00").do(lambda: asyncio.create_task(send_daily_report()))
+    schedule.every().day.at("20:00").do(lambda: asyncio.create_task(send_daily_report_task()))
+    schedule.every().day.at("00:05").do(lambda: asyncio.create_task(clean_trade_history_task()))
 
     await asyncio.gather(
         start_telegram_bot(),
