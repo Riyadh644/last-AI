@@ -56,8 +56,26 @@ def fetch_stocks_from_tradingview():
         print(f"❌ فشل في جلب الأسهم من TradingView: {e}")
         return []
 
+def filter_top_stocks_by_custom_rules(stock):
+    try:
+        price = stock.get("close", 0)
+        market_cap = stock.get("market_cap", 0)
+        volume = stock.get("vol", 0)
+        change = stock.get("change", 0)
+        if not (0 < price <= 5):
+            return False
+        if not (volume >= 2_000_000):
+            return False
+        if not (market_cap <= 3_207_060_000):
+            return False
+        if not (0 <= change <= 300):
+            return False
+        return True
+    except:
+        return False
+
 def analyze_high_movement_stocks():
-    print("🚀 جاري تحليل الأسهم ذات الحركة العالية...")
+    print("\U0001f680 جاري تحليل الأسهم ذات الحركة العالية...")
     stocks = fetch_stocks_from_tradingview()
     high_movement = []
 
@@ -68,30 +86,25 @@ def analyze_high_movement_stocks():
             market_cap = stock.get("market_cap", 0)
             change = stock.get("change", 0)
             price = stock.get("close", 0)
-            
-            if (vol > market_cap * 0.5 and
-                change > 15 and
-                price < 15 and 
-                vol > 5_000_000):
-                
+
+            if (vol > market_cap * 0.5 and change > 15 and price < 15 and vol > 5_000_000):
                 high_movement.append(stock)
-                
+
         except Exception as e:
             print(f"❌ خطأ في تحليل سهم {stock.get('symbol')}: {e}")
 
     save_json(HIGH_MOVEMENT_FILE, high_movement[:5])
     save_daily_history(high_movement, "high_movement_stocks")
-    
+
     print(f"✅ تم العثور على {len(high_movement)} سهم بحركة عالية.")
     return high_movement
 
 async def analyze_high_movement_stocks_async():
-    """نسخة غير متزامنة للاستخدام في السياقات async"""
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, analyze_high_movement_stocks)
 
 def analyze_market():
-    print("📊 جاري تحليل السوق (مطابقة Webull)...")
+    print("\U0001f4ca جاري تحليل السوق (مطابقة Webull)...")
     model = load_model()
     stocks = fetch_stocks_from_tradingview()
 
@@ -101,6 +114,9 @@ def analyze_market():
         try:
             symbol = stock["symbol"].upper()
             if not isinstance(stock["market_cap"], (int, float)) or stock["market_cap"] > 3_200_000_000:
+                continue
+
+            if not filter_top_stocks_by_custom_rules(stock):
                 continue
 
             if had_recent_losses(symbol): continue
@@ -128,7 +144,7 @@ def analyze_market():
 
             score = predict_buy_signal(model, features)
             stock["score"] = score
-            print(f"🔍 {symbol} → Score: {score:.2f}%")
+            print(f"\U0001f50d {symbol} → Score: {score:.2f}%")
 
             if score >= 25:
                 top_stocks.append(stock)
@@ -203,14 +219,14 @@ def fetch_data_from_tradingview(symbol):
             "MACD": row[6],
             "MACD_signal": row[7],
             "Stoch_K": row[8],
-            "Stoch_D": row[9],
+            "Stoch_D": row[9]
         }
     except Exception as e:
         print(f"❌ TradingView Error {symbol}: {e}")
         return None
 
 def analyze_single_stock(symbol):
-    print(f"📊 تحليل سهم فردي: {symbol}")
+    print(f"\U0001f4ca تحليل سهم فردي: {symbol}")
     model = load_model()
     data = fetch_data_from_tradingview(symbol)
 

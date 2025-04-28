@@ -12,7 +12,7 @@ from telegram import Bot
 from modules.analyze_performance import generate_report_summary
 from modules.tv_data import (
     analyze_market, analyze_single_stock,
-    fetch_stocks_from_tradingview, analyze_high_movement_stocks
+    fetch_stocks_from_tradingview, analyze_high_movement_stocks, filter_top_stocks_by_rules
 )
 from modules.ml_model import train_model_daily
 from modules.symbols_updater import fetch_all_us_symbols, save_symbols_to_csv
@@ -95,7 +95,7 @@ def watch_positive_news_stocks():
             symbol = stock["symbol"]
             sentiment = fetch_news_sentiment(symbol)
             if sentiment == "positive" and symbol not in old_symbols:
-                message = f"📢 سهم جديد بأخبار إيجابية:\n📈 {symbol}\n✅ تم رصده في السوق"
+                message = f"\ud83d\udce2 سهم جديد بأخبار إيجابية:\n\ud83d\udcc8 {symbol}\n✅ تم رصده في السوق"
                 send_telegram_message(message)
                 positive_stocks.append(stock)
 
@@ -109,10 +109,6 @@ def watch_positive_news_stocks():
     except Exception as e:
         log(f"❌ فشل في مراقبة الأخبار الإيجابية: {e}")
 
-async def daily_model_training():
-    log("🔁 تدريب يومي للنموذج الذكي...")
-    train_model_daily()
-
 async def update_market_data():
     if not is_market_open():
         log("⏸️ السوق مغلق - إلغاء التحديث")
@@ -120,12 +116,22 @@ async def update_market_data():
     if is_market_weak():
         log("⚠️ السوق ضعيف (SPY < -1%). تم إلغاء التوصيات.")
         return
+
     log("📊 تحديث بيانات السوق...")
     try:
-        stocks = analyze_market()
-        log(f"✅ تحليل مكتمل: {len(stocks)} سهم بعد الفلترة.")
+        stocks = fetch_stocks_from_tradingview()
+        filtered = filter_top_stocks_by_rules(stocks)
+
+        if not filtered:
+            log("⚠️ لا توجد أسهم قوية مطابقة للفلترة.")
+        else:
+            log(f"✅ تم استخراج {len(filtered)} سهم قوي.")
+
+            with open("data/top_stocks.json", "w", encoding="utf-8") as f:
+                json.dump(filtered, f, indent=2, ensure_ascii=False)
+
     except Exception as e:
-        log(f"❌ فشل تحليل السوق: {e}")
+        log(f"❌ فشل تحديث أقوى الأسهم: {e}")
 
 async def update_symbols():
     log("🔁 تحديث رموز السوق...")
