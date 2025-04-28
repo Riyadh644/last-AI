@@ -17,7 +17,7 @@ from modules.ml_model import load_model, predict_buy_signal
 from modules.user_manager import save_user, get_all_users
 from modules.analyze_performance import generate_report_summary
 
-BOT_TOKEN = "7740179871:AAFYnS_QS595Gw5uRTMuW8N9ajUB4pK4tJ0"
+BOT_TOKEN = "7326658749:AAFqhl8U5t_flhDhr2prAzfjZtEdcCKYdsg"
 USERS_FILE = "data/users.json"
 
 keyboard = [

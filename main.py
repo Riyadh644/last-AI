@@ -31,7 +31,7 @@ nest_asyncio.apply()
 # إعدادات عامة
 NEWS_API_KEY = "BpXXFMPQ3JdCinpg81kfn4ohvmnhGZOwEmHjLIre"
 POSITIVE_NEWS_FILE = "data/positive_watchlist.json"
-BOT_TOKEN = "7740179871:AAFYnS_QS595Gw5uRTMuW8N9ajUB4pK4tJ0"
+BOT_TOKEN = "7326658749:AAFqhl8U5t_flhDhr2prAzfjZtEdcCKYdsg"
 
 # إنشاء مجلد السجلات إن لم يكن موجوداً
 os.makedirs("logs", exist_ok=True)
