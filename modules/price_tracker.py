@@ -37,7 +37,7 @@ async def check_targets(bot):
         entry_price = float(trade["entry_price"])
         timestamp = trade.get("timestamp", "")
 
-        # 🛡️ تأكد أن الصفقة اليوم فقط
+        # 🛡️ تأكد أن الصفقة مضافة اليوم فقط
         if not is_today(timestamp):
             continue
 
@@ -91,3 +91,27 @@ async def check_targets(bot):
     # حفظ التحديثات
     with open(TRADE_HISTORY_FILE, "w", encoding="utf-8") as f:
         json.dump(trades, f, indent=2, ensure_ascii=False)
+
+def clean_old_trades():
+    """حذف الصفقات الأقدم من 30 يوم"""
+    if not os.path.exists(TRADE_HISTORY_FILE):
+        return
+
+    with open(TRADE_HISTORY_FILE, "r", encoding="utf-8") as f:
+        trades = json.load(f)
+
+    today = datetime.utcnow().date()
+    fresh_trades = []
+
+    for trade in trades:
+        try:
+            entry_date = datetime.strptime(trade["timestamp"], "%Y-%m-%d %H:%M:%S").date()
+            if (today - entry_date).days <= 30:
+                fresh_trades.append(trade)
+        except:
+            continue
+
+    with open(TRADE_HISTORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(fresh_trades, f, indent=2, ensure_ascii=False)
+
+    print(f"✅ تم حذف الصفقات الأقدم من 30 يوم، تبقى {len(fresh_trades)} صفقة.")
