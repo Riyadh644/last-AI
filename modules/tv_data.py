@@ -247,3 +247,28 @@ def analyze_single_stock(symbol):
 
     print(f"✅ {symbol} → Score: {score:.2f}% → {result['signal']}")
     return result
+def analyze_high_movement_stocks():
+    print("🚀 جاري تحليل الأسهم ذات الحركة العالية...")
+    stocks = fetch_stocks_from_tradingview()
+    high_movement = []
+
+    for stock in stocks:
+        try:
+            symbol = stock["symbol"]
+            vol = stock.get("vol", 0)
+            market_cap = stock.get("market_cap", 0)
+            change = stock.get("change", 0)
+            price = stock.get("close", 0)
+
+            if (vol > market_cap * 0.5 and change > 15 and price < 15 and vol > 5_000_000):
+                high_movement.append(stock)
+
+        except Exception as e:
+            print(f"❌ خطأ في تحليل سهم {stock.get('symbol')}: {e}")
+
+    save_json(HIGH_MOVEMENT_FILE, high_movement[:5])
+    save_daily_history(high_movement, "high_movement_stocks")
+
+    print(f"✅ تم العثور على {len(high_movement)} سهم بحركة عالية.")
+    print(f"📅 high_movement_stocks.json تم تحديثه في {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    return high_movement
