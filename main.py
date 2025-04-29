@@ -185,6 +185,8 @@ async def send_daily_report_task():
 
 async def clean_trade_history_task():
     clean_old_trades()
+
+
 async def daily_model_training():
     log("🔁 تدريب يومي للنموذج الذكي...")
     try:
@@ -192,6 +194,8 @@ async def daily_model_training():
         log("✅ تم تدريب النموذج اليومي بنجاح.")
     except Exception as e:
         log(f"❌ فشل تدريب النموذج: {e}")
+
+        
 async def run_scheduled_jobs(bot):
     while True:
         schedule.run_pending()
