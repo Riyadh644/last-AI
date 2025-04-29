@@ -120,9 +120,12 @@ async def update_market_data():
 
     log("📊 تحليل وتحديث السوق...")
     try:
-        shutil.copy("data/top_stocks.json", "data/top_stocks_old.json") if os.path.exists("data/top_stocks.json") else None
-        shutil.copy("data/pump_stocks.json", "data/pump_stocks_old.json") if os.path.exists("data/pump_stocks.json") else None
-        shutil.copy("data/high_movement_stocks.json", "data/high_movement_stocks_old.json") if os.path.exists("data/high_movement_stocks.json") else None
+        if os.path.exists("data/top_stocks.json"):
+            shutil.copy("data/top_stocks.json", "data/top_stocks_old.json")
+        if os.path.exists("data/pump_stocks.json"):
+            shutil.copy("data/pump_stocks.json", "data/pump_stocks_old.json")
+        if os.path.exists("data/high_movement_stocks.json"):
+            shutil.copy("data/high_movement_stocks.json", "data/high_movement_stocks_old.json")
 
         await asyncio.to_thread(analyze_market)
         log("✅ تم تحليل السوق بنجاح.")
