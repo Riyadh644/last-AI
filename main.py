@@ -52,7 +52,6 @@ def is_market_open():
     now = datetime.now(timezone.utc)  # ✅ تعديل
     return now.weekday() < 5 and 13 <= now.hour <= 20
 
-    return now.weekday() < 5 and 13 <= now.hour <= 20
 
 
 def is_market_weak():
@@ -231,19 +230,18 @@ async def main():
 
 if __name__ == "__main__":
     import sys
-    import asyncio
 
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-    loop = asyncio.get_event_loop()
-
     try:
+        loop = asyncio.get_event_loop()
         if loop.is_running():
-            print("🔁 حلقة الأحداث تعمل بالفعل - تشغيل main داخلها")
+            print("🔁 الحلقة تعمل بالفعل، تشغيل المهمة داخلها...")
             loop.create_task(main())
         else:
             loop.run_until_complete(main())
-    except Exception as e:
-        print(f"❌ استثناء أثناء التشغيل: {e}")
+    except RuntimeError as e:
+        print(f"❌ خطأ في الحلقة: {e}")
+
 
