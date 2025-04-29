@@ -53,7 +53,7 @@ def fetch_stocks_from_tradingview():
             })
         return stocks
     except Exception as e:
-        print(f"❌ فشل في جلب الأسهم من TradingView: {e}")
+        print(f"\u274c فشل في جلب الأسهم من TradingView: {e}")
         return []
 
 def filter_top_stocks_by_custom_rules(stock):
@@ -72,9 +72,8 @@ def filter_top_stocks_by_custom_rules(stock):
             return False
         return True
     except Exception as e:
-        print(f"❌ خطأ في الفلترة: {e}")
+        print(f"\u274c خطأ في الفلترة: {e}")
         return False
-
 
 def analyze_high_movement_stocks():
     print("\U0001f680 جاري تحليل الأسهم ذات الحركة العالية...")
@@ -93,12 +92,13 @@ def analyze_high_movement_stocks():
                 high_movement.append(stock)
 
         except Exception as e:
-            print(f"❌ خطأ في تحليل سهم {stock.get('symbol')}: {e}")
+            print(f"\u274c خطأ في تحليل سهم {stock.get('symbol')}: {e}")
 
     save_json(HIGH_MOVEMENT_FILE, high_movement[:5])
     save_daily_history(high_movement, "high_movement_stocks")
 
-    print(f"✅ تم العثور على {len(high_movement)} سهم بحركة عالية.")
+    print(f"\u2705 تم العثور على {len(high_movement)} سهم بحركة عالية.")
+    print(f"\ud83d\udcc5 high_movement_stocks.json تم تحديثه في {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     return high_movement
 
 async def analyze_high_movement_stocks_async():
@@ -155,7 +155,7 @@ def analyze_market():
                 pump_stocks.append(stock)
 
         except Exception as e:
-            print(f"❌ تحليل {stock.get('symbol', 'UNKNOWN')} فشل: {e}")
+            print(f"\u274c تحليل {stock.get('symbol', 'UNKNOWN')} فشل: {e}")
 
     top_stocks = sorted(top_stocks, key=lambda x: x["score"], reverse=True)[:3]
     pump_stocks = sorted(pump_stocks, key=lambda x: x["score"], reverse=True)[:3]
@@ -166,7 +166,8 @@ def analyze_market():
     save_daily_history(top_stocks, "top_stocks")
     save_daily_history(pump_stocks, "pump_stocks")
 
-    print(f"\n✅ تحليل مكتمل: {len(top_stocks)} أقوى، {len(pump_stocks)} انفجار.")
+    print(f"\n\u2705 تحليل مكتمل: {len(top_stocks)} أقوى، {len(pump_stocks)} انفجار.")
+    print(f"\ud83d\udcc5 top_stocks.json تم تحديثه في {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     return top_stocks + pump_stocks
 
 def save_json(path, data):
@@ -186,9 +187,9 @@ def save_daily_history(data, category):
     try:
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2, default=convert_np)
-        print(f"📁 تم حفظ {category} في {filename}")
+        print(f"\ud83d\udcc5 تم حفظ {category} في {filename}")
     except Exception as e:
-        print(f"❌ فشل حفظ {category}: {e}")
+        print(f"\u274c فشل حفظ {category}: {e}")
 
 def fetch_data_from_tradingview(symbol):
     try:
@@ -224,7 +225,7 @@ def fetch_data_from_tradingview(symbol):
             "Stoch_D": row[9]
         }
     except Exception as e:
-        print(f"❌ TradingView Error {symbol}: {e}")
+        print(f"\u274c TradingView Error {symbol}: {e}")
         return None
 
 def analyze_single_stock(symbol):
@@ -233,7 +234,7 @@ def analyze_single_stock(symbol):
     data = fetch_data_from_tradingview(symbol)
 
     if not data:
-        print(f"❌ لا يمكن تحليل {symbol}: لا توجد بيانات من TradingView")
+        print(f"\u274c لا يمكن تحليل {symbol}: لا توجد بيانات من TradingView")
         return None
 
     features = {
@@ -252,5 +253,5 @@ def analyze_single_stock(symbol):
         "signal": "buy" if score >= 25 else "watch" if score >= 20 else "reject"
     }
 
-    print(f"✅ {symbol} → Score: {score:.2f}% → {result['signal']}")
+    print(f"\u2705 {symbol} → Score: {score:.2f}% → {result['signal']}")
     return result

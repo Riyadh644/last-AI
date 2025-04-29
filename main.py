@@ -8,14 +8,13 @@ import requests
 import nest_asyncio
 from datetime import datetime, timedelta, timezone
 
-
 from telegram import Bot
 from modules.analyze_performance import generate_report_summary
 from modules.tv_data import (
-    fetch_stocks_from_tradingview, 
+    fetch_stocks_from_tradingview,
     analyze_high_movement_stocks,
     analyze_single_stock,
-    filter_top_stocks_by_custom_rules  # ✅ تم تعديل الاسم هنا
+    analyze_market  # ✅ استخدمنا analyze_market بدلاً من filter_top_stocks_by_custom_rules
 )
 from modules.ml_model import train_model_daily
 from modules.symbols_updater import fetch_all_us_symbols, save_symbols_to_csv
@@ -28,10 +27,8 @@ from modules.telegram_bot import (
 from modules.pump_detector import detect_pump_stocks
 from modules.price_tracker import check_targets, clean_old_trades
 
-# تفعيل دعم التزامن
 nest_asyncio.apply()
 
-# إعدادات عامة
 NEWS_API_KEY = "BpXXFMPQ3JdCinpg81kfn4ohvmnhGZOwEmHjLIre"
 POSITIVE_NEWS_FILE = "data/positive_watchlist.json"
 BOT_TOKEN = "7326658749:AAFqhl8U5t_flhDhr2prAzfjZtEdcCKYdsg"
@@ -48,12 +45,9 @@ def log(msg):
     print(msg)
     logging.info(msg)
 
-
 def is_market_open():
-    now = datetime.now(timezone.utc)  # ✅ تعديل
+    now = datetime.now(timezone.utc)
     return now.weekday() < 5 and 13 <= now.hour <= 20
-
-
 
 def is_market_weak():
     try:
@@ -123,19 +117,12 @@ async def update_market_data():
         log("⚠️ السوق ضعيف (SPY < -1%). تم إلغاء التوصيات.")
         return
 
-    log("📊 تحديث بيانات السوق...")
+    log("📊 تحليل وتحديث السوق...")
     try:
-        stocks = fetch_stocks_from_tradingview()
-        filtered = filter_top_stocks_by_custom_rules(stocks)
-
-        if not filtered:
-            log("⚠️ لا توجد أسهم قوية مطابقة للفلترة.")
-        else:
-            log(f"✅ تم استخراج {len(filtered)} سهم قوي.")
-            with open("data/top_stocks.json", "w", encoding="utf-8") as f:
-                json.dump(filtered, f, indent=2, ensure_ascii=False)
+        await asyncio.to_thread(analyze_market)
+        log("✅ تم تحليل السوق بنجاح.")
     except Exception as e:
-        log(f"❌ فشل تحديث أقوى الأسهم: {e}")
+        log(f"❌ فشل تحليل السوق: {e}")
 
 async def update_symbols():
     log("🔁 تحديث رموز السوق...")
@@ -190,7 +177,6 @@ async def send_daily_report_task():
 async def clean_trade_history_task():
     clean_old_trades()
 
-
 async def daily_model_training():
     log("🔁 تدريب يومي للنموذج الذكي...")
     try:
@@ -198,7 +184,6 @@ async def daily_model_training():
         log("✅ تم تدريب النموذج اليومي بنجاح.")
     except Exception as e:
         log(f"❌ فشل تدريب النموذج: {e}")
-
 
 async def run_scheduled_jobs(bot):
     while True:
@@ -213,7 +198,6 @@ async def main():
     await update_pump_stocks()
     await update_high_movement_stocks()
 
-    # جدولة المهام
     schedule.every().day.at("00:00").do(lambda: asyncio.create_task(daily_model_training()))
     schedule.every().day.at("03:00").do(lambda: asyncio.create_task(update_symbols()))
     schedule.every(5).minutes.do(lambda: asyncio.create_task(update_market_data()))
@@ -230,12 +214,10 @@ async def main():
             schedule.run_pending()
             await asyncio.sleep(30)
 
-    # 🔁 شغل البوت والمهام الدورية معًا
     await asyncio.gather(
         start_telegram_bot(),
         keep_running_schedules()
     )
-
 
 if __name__ == "__main__":
     import sys
@@ -252,5 +234,3 @@ if __name__ == "__main__":
             loop.run_until_complete(main())
     except RuntimeError as e:
         print(f"❌ خطأ في الحلقة: {e}")
-
-
