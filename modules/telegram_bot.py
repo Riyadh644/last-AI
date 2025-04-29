@@ -180,25 +180,26 @@ async def notify_stop_loss(bot, stock):
 
 async def compare_stock_lists_and_alert(bot):
     print("🔔 جاري فحص التغيرات في الأسهم...")
-    
-    old_top = load_json("data/top_stocks.json")
-    old_pump = load_json("data/pump_stocks.json")
-    old_high = load_json("data/high_movement_stocks.json")
-    
+
+    old_top = load_json("data/top_stocks_old.json")
+    old_pump = load_json("data/pump_stocks_old.json")
+    old_high = load_json("data/high_movement_stocks_old.json")
+
     new_top = load_json("data/top_stocks.json")
     new_pump = load_json("data/pump_stocks.json")
     new_high = load_json("data/high_movement_stocks.json")
-    
+
     sections = [
         ("top", "أقوى الأسهم", old_top, new_top),
         ("pump", "الأسهم القابلة للانفجار", old_pump, new_pump),
         ("high_movement", "الأسهم ذات الحركة العالية", old_high, new_high)
     ]
-    
+
     for list_type, list_name, old_list, new_list in sections:
         added = [s for s in new_list if s['symbol'] not in [x['symbol'] for x in old_list]]
         for stock in added:
             await notify_new_stock(bot, stock, list_type)
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
