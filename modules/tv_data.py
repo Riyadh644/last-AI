@@ -5,7 +5,7 @@ import numpy as np
 from datetime import datetime
 from modules.ml_model import load_model, predict_buy_signal
 from modules.history_tracker import was_seen_recently, had_recent_losses
-from modules.notifier import send_telegram_message  # ✅ استيراد من notifier لتجنب الاستيراد الدائري
+from modules.notifier import send_telegram_message
 import asyncio
 
 TOP_STOCKS_FILE = "data/top_stocks.json"
@@ -54,7 +54,7 @@ def fetch_stocks_from_tradingview():
             })
         return stocks
     except Exception as e:
-        print(f"❌ فشل في جلب الأسهم من TradingView: {e}")
+        print(f"\u274c \u0641\u0634\u0644 \u0641\u064a \u062c\u0644\u0628 \u0627\u0644\u0623\u0633\u0647\u0645 \u0645\u0646 TradingView: {e}")
         return []
 
 def filter_top_stocks_by_custom_rules(stock):
@@ -63,51 +63,27 @@ def filter_top_stocks_by_custom_rules(stock):
         market_cap = stock.get("market_cap", 0)
         volume = stock.get("vol", 0)
         change = stock.get("change", 0)
-        if not (0 < price <= 5):
-            return False
-        if not (volume >= 2_000_000):
-            return False
-        if not (market_cap <= 3_207_060_000):
-            return False
-        if not (0 <= change <= 300):
-            return False
+        if not (0 < price <= 5): return False
+        if not (volume >= 2_000_000): return False
+        if not (market_cap <= 3_207_060_000): return False
+        if not (0 <= change <= 300): return False
         return True
     except Exception as e:
-        print(f"❌ خطأ في الفلترة: {e}")
+        print(f"\u274c \u062e\u0637\u0623 \u0641\u064a \u0627\u0644\u0641\u0644\u062a\u0631\u0629: {e}")
         return False
 
-def analyze_high_movement_stocks():
-    print("🚀 جاري تحليل الأسهم ذات الحركة العالية...")
-    stocks = fetch_stocks_from_tradingview()
-    high_movement = []
+def load_json(path):
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
 
-    for stock in stocks:
-        try:
-            symbol = stock["symbol"]
-            vol = stock.get("vol", 0)
-            market_cap = stock.get("market_cap", 0)
-            change = stock.get("change", 0)
-            price = stock.get("close", 0)
-
-            if (vol > market_cap * 0.5 and change > 15 and price < 15 and vol > 5_000_000):
-                high_movement.append(stock)
-
-        except Exception as e:
-            print(f"❌ خطأ في تحليل سهم {stock.get('symbol')}: {e}")
-
-    save_json(HIGH_MOVEMENT_FILE, high_movement[:5])
-    save_daily_history(high_movement, "high_movement_stocks")
-
-    print(f"✅ تم العثور على {len(high_movement)} سهم بحركة عالية.")
-    print(f"📅 high_movement_stocks.json تم تحديثه في {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    return high_movement
-
-async def analyze_high_movement_stocks_async():
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, analyze_high_movement_stocks)
+def remove_duplicates_today(new_list, old_list):
+    old_symbols = [x['symbol'] for x in old_list]
+    return [stock for stock in new_list if stock['symbol'] not in old_symbols]
 
 def analyze_market():
-    print("📊 جاري تحليل السوق (مطابقة Webull)...")
+    print("\ud83d\udcca \u062c\u0627\u0631\u064a \u062a\u062d\u0644\u064a\u0644 \u0627\u0644\u0633\u0648\u0642...")
     model = load_model()
     stocks = fetch_stocks_from_tradingview()
 
@@ -147,7 +123,7 @@ def analyze_market():
 
             score = predict_buy_signal(model, features)
             stock["score"] = score
-            print(f"🔍 {symbol} → Score: {score:.2f}%")
+            print(f"\ud83d\udd0d {symbol} → Score: {score:.2f}%")
 
             if score >= 25:
                 top_stocks.append(stock)
@@ -156,7 +132,13 @@ def analyze_market():
                 pump_stocks.append(stock)
 
         except Exception as e:
-            print(f"❌ تحليل {stock.get('symbol', 'UNKNOWN')} فشل: {e}")
+            print(f"\u274c \u062a\u062d\u0644\u064a\u0644 {stock.get('symbol', 'UNKNOWN')} \u0641\u0634\u0644: {e}")
+
+    # ازالة التكرار اليومي
+    old_top = load_json("data/top_stocks_old.json")
+    old_pump = load_json("data/pump_stocks_old.json")
+    top_stocks = remove_duplicates_today(top_stocks, old_top)
+    pump_stocks = remove_duplicates_today(pump_stocks, old_pump)
 
     top_stocks = sorted(top_stocks, key=lambda x: x["score"], reverse=True)[:3]
     pump_stocks = sorted(pump_stocks, key=lambda x: x["score"], reverse=True)[:3]
@@ -167,9 +149,13 @@ def analyze_market():
     save_daily_history(top_stocks, "top_stocks")
     save_daily_history(pump_stocks, "pump_stocks")
 
-    print(f"\n✅ تحليل مكتمل: {len(top_stocks)} أقوى، {len(pump_stocks)} انفجار.")
-    print(f"📅 top_stocks.json تم تحديثه في {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"\n\u2705 \u062a\u062d\u0644\u064a\u0644 \u0645\u0643\u062a\u0645\u0644: {len(top_stocks)} \u0623\u0642\u0648\u0649، {len(pump_stocks)} \u0627\u0646\u0641\u062c\u0627\u0631.")
+    print(f"\ud83d\udcc5 top_stocks.json \u062a\u0645 \u062a\u062d\u062f\u064a\u062b\u0647 \u0641\u064a {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     return top_stocks + pump_stocks
+
+# تابع بقية الدوال كما هي بدون تعديل
+# (convert_np, save_json, save_daily_history, fetch_data_from_tradingview, analyze_single_stock)
+
 
 def convert_np(o):
     if isinstance(o, (np.integer, np.floating)):
