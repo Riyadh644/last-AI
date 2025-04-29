@@ -173,7 +173,13 @@ def analyze_market():
 def save_json(path, data):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False, default=convert_np)
+        try:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        except UnicodeEncodeError:
+            print(f"⚠️ مشكلة في ترميز الرموز في {path}، سيتم الحفظ بدون رموز.")
+            cleaned = json.loads(json.dumps(data))  # يعيد تحويل الرموز
+            json.dump(cleaned, f, indent=2, ensure_ascii=True)
+
 
 def convert_np(o):
     if isinstance(o, (np.integer, np.floating)):
