@@ -11,8 +11,10 @@ from datetime import datetime, timedelta
 from telegram import Bot
 from modules.analyze_performance import generate_report_summary
 from modules.tv_data import (
-    analyze_market, analyze_single_stock,
-    fetch_stocks_from_tradingview, analyze_high_movement_stocks, filter_top_stocks_by_rules
+    fetch_stocks_from_tradingview, 
+    analyze_high_movement_stocks,
+    analyze_single_stock,
+    filter_top_stocks_by_custom_rules  # ✅ تم تعديل الاسم هنا
 )
 from modules.ml_model import train_model_daily
 from modules.symbols_updater import fetch_all_us_symbols, save_symbols_to_csv
@@ -47,7 +49,7 @@ def log(msg):
 
 def is_market_open():
     now = datetime.utcnow()
-    return now.weekday() < 5 and 13 <= now.hour <= 20  # بتوقيت UTC
+    return now.weekday() < 5 and 13 <= now.hour <= 20
 
 def is_market_weak():
     try:
@@ -95,7 +97,7 @@ def watch_positive_news_stocks():
             symbol = stock["symbol"]
             sentiment = fetch_news_sentiment(symbol)
             if sentiment == "positive" and symbol not in old_symbols:
-                message = f"\ud83d\udce2 سهم جديد بأخبار إيجابية:\n\ud83d\udcc8 {symbol}\n✅ تم رصده في السوق"
+                message = f"📢 سهم جديد بأخبار إيجابية:\n📈 {symbol}\n✅ تم رصده في السوق"
                 send_telegram_message(message)
                 positive_stocks.append(stock)
 
@@ -120,16 +122,14 @@ async def update_market_data():
     log("📊 تحديث بيانات السوق...")
     try:
         stocks = fetch_stocks_from_tradingview()
-        filtered = filter_top_stocks_by_rules(stocks)
+        filtered = filter_top_stocks_by_custom_rules(stocks)
 
         if not filtered:
             log("⚠️ لا توجد أسهم قوية مطابقة للفلترة.")
         else:
             log(f"✅ تم استخراج {len(filtered)} سهم قوي.")
-
             with open("data/top_stocks.json", "w", encoding="utf-8") as f:
                 json.dump(filtered, f, indent=2, ensure_ascii=False)
-
     except Exception as e:
         log(f"❌ فشل تحديث أقوى الأسهم: {e}")
 
