@@ -237,9 +237,11 @@ if __name__ == "__main__":
         loop.run_until_complete(main())
     except RuntimeError as e:
         if "Cannot close a running event loop" in str(e):
+            print("🔁 إعادة تشغيل الحلقة لأن الإغلاق غير مسموح...")
             loop = asyncio.get_event_loop()
             loop.create_task(main())
             loop.run_forever()
         else:
             raise e
+
 
