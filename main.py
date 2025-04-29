@@ -6,6 +6,7 @@ import schedule
 import yfinance as yf
 import requests
 import nest_asyncio
+import shutil
 from datetime import datetime, timedelta, timezone
 
 from telegram import Bot
@@ -14,7 +15,7 @@ from modules.tv_data import (
     fetch_stocks_from_tradingview,
     analyze_high_movement_stocks,
     analyze_single_stock,
-    analyze_market  # ✅ استخدمنا analyze_market بدلاً من filter_top_stocks_by_custom_rules
+    analyze_market
 )
 from modules.ml_model import train_model_daily
 from modules.symbols_updater import fetch_all_us_symbols, save_symbols_to_csv
@@ -119,6 +120,10 @@ async def update_market_data():
 
     log("📊 تحليل وتحديث السوق...")
     try:
+        shutil.copy("data/top_stocks.json", "data/top_stocks_old.json") if os.path.exists("data/top_stocks.json") else None
+        shutil.copy("data/pump_stocks.json", "data/pump_stocks_old.json") if os.path.exists("data/pump_stocks.json") else None
+        shutil.copy("data/high_movement_stocks.json", "data/high_movement_stocks_old.json") if os.path.exists("data/high_movement_stocks.json") else None
+
         await asyncio.to_thread(analyze_market)
         log("✅ تم تحليل السوق بنجاح.")
     except Exception as e:
