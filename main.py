@@ -48,7 +48,8 @@ def log(msg):
     logging.info(msg)
 
 def is_market_open():
-    now = datetime.utcnow()
+    now = datetime.now(datetime.timezone.utc)
+
     return now.weekday() < 5 and 13 <= now.hour <= 20
 
 def is_market_weak():
@@ -232,13 +233,14 @@ if __name__ == "__main__":
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+    loop = asyncio.get_event_loop()
+
     try:
-        asyncio.run(main())
-    except RuntimeError as e:
-        if "Cannot close a running event loop" in str(e):
-            print("🔁 إعادة تشغيل الحلقة لأن الإغلاق غير مسموح...")
-            loop = asyncio.get_event_loop()
+        if loop.is_running():
+            print("🔁 حلقة الأحداث تعمل بالفعل - تشغيل main داخلها")
             loop.create_task(main())
-            loop.run_forever()
         else:
-            raise
+            loop.run_until_complete(main())
+    except Exception as e:
+        print(f"❌ استثناء أثناء التشغيل: {e}")
+
