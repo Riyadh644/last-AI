@@ -389,12 +389,12 @@ async def start_telegram_bot():
 
         await app.initialize()        # تهيئة التطبيق
         await app.start()              # بدء التشغيل
-        await app.updater.start_polling()  # بدء استقبال الرسائل
-        await app.updater.idle()       # انتظار حتى إيقاف البوت
+        await app.run_polling()        # بدء استقبال الرسائل بشكل صحيح (بدل idle)
 
     except Exception as e:
         print(f"⚠️ خطأ في البوت: {e}")
         await asyncio.sleep(10)
+
 
 # 🚀 شغل البوت
 if __name__ == "__main__":
