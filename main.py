@@ -22,9 +22,9 @@ from modules.symbols_updater import fetch_all_us_symbols, save_symbols_to_csv
 from modules.telegram_bot import (
     start_telegram_bot,
     compare_stock_lists_and_alert,
-    send_performance_report,
-    send_telegram_message
+    send_performance_report
 )
+from modules.notifier import send_telegram_message
 from modules.pump_detector import detect_pump_stocks
 from modules.price_tracker import check_targets, clean_old_trades
 

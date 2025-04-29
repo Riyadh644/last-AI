@@ -5,14 +5,13 @@ import numpy as np
 from datetime import datetime
 from modules.ml_model import load_model, predict_buy_signal
 from modules.history_tracker import was_seen_recently, had_recent_losses
+from modules.notifier import send_telegram_message  # ✅ استيراد من notifier لتجنب الاستيراد الدائري
 import asyncio
-from modules.telegram_bot import send_telegram_message
 
 TOP_STOCKS_FILE = "data/top_stocks.json"
 WATCHLIST_FILE = "data/watchlist.json"
 PUMP_FILE = "data/pump_stocks.json"
 HIGH_MOVEMENT_FILE = "data/high_movement_stocks.json"
-TRADE_HISTORY_FILE = "data/trade_history.json"
 
 TRADINGVIEW_SESSION = "s2jnbmdgwvazkt0smrddzcdlityywzfx"
 TRADINGVIEW_HEADERS = {
@@ -177,16 +176,9 @@ def convert_np(o):
         return o.item()
     raise TypeError(f"Type {type(o)} not serializable")
 
-def backup_file(path):
-    if os.path.exists(path):
-        backup_path = path.replace(".json", "_previous.json")
-        os.replace(path, backup_path)
-        send_telegram_message(f"🛡️ نسخة احتياطية محدثة: {backup_path}")
-
 def save_json(path, data):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     try:
-        backup_file(path)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False, default=convert_np)
     except (UnicodeEncodeError, TypeError) as e:
@@ -199,7 +191,6 @@ def save_daily_history(data, category):
     os.makedirs("history", exist_ok=True)
     filename = f"history/{category}_{today}.json"
     try:
-        backup_file(filename)
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2, default=convert_np)
         print(f"📅 تم حفظ {category} في {filename}")
