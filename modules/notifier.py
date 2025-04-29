@@ -123,3 +123,39 @@ async def compare_stock_lists_and_alert(bot):
         added = [s for s in new_list if s["symbol"] not in [x["symbol"] for x in old_list]]
         for stock in added:
             await notify_new_stock(bot, stock, list_type)
+async def notify_target_hit(bot, stock, target_type):
+    if target_type == "target1":
+        message = f"""
+🎯 <b>✨ هدف أول محقق</b> 🎯
+
+🏆 <code>{stock['symbol']}</code>
+💰 <b>الدخول:</b> {stock['entry_price']:.2f} $
+📈 <b>الحالي:</b> {stock['current_price']:.2f} $
+📊 <b>الربح:</b> +{stock['profit']:.2f} %
+⏱️ <b>المدة:</b> {stock.get('duration', 'N/A')}
+"""
+    elif target_type == "target2":
+        message = f"""
+🎯🎯 <b>🌟 هدف ثاني محقق</b> 🎯🎯
+
+<code>{stock['symbol']}</code>
+💰 <b>الدخول:</b> {stock['entry_price']:.2f} $
+📈 <b>الحالي:</b> {stock['current_price']:.2f} $
+📊 <b>الربح:</b> +{stock['profit']:.2f} %
+⏳ <b>المدة:</b> {stock.get('duration', 'N/A')}
+"""
+    await broadcast_message(bot, message.strip())
+
+
+async def notify_stop_loss(bot, stock):
+    message = f"""
+⚠️ <b>🌪️ إنذار وقف خسارة</b> ⚠️
+
+🔻 <code>{stock['symbol']}</code>
+📉 <b>انخفاض:</b> {stock['distance_to_sl']:.2f} %
+💸 <b>الوقف:</b> {stock['stop_loss_price']:.2f} $
+
+🚨 <b>الإجراء:</b> اخرج فورًا
+🕒 <b>الوقت:</b> {datetime.now().strftime("%H:%M")}
+"""
+    await broadcast_message(bot, message.strip())

@@ -2,7 +2,7 @@ import json
 import os
 import yfinance as yf
 from datetime import datetime
-from modules.telegram_bot import notify_target_hit, notify_stop_loss
+from modules.notifier import notify_target_hit, notify_stop_loss
 
 TRADE_HISTORY_FILE = "data/trade_history.json"
 
