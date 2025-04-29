@@ -16,7 +16,7 @@ from modules.tv_data import (
     analyze_single_stock,
     analyze_market
 )
-from modules.tv_data import analyze_high_movement_stocks_async as analyze_high_movement_stocks
+from modules.tv_data import analyze_high_movement_stocks
 
 from modules.ml_model import train_model_daily
 from modules.symbols_updater import fetch_all_us_symbols, save_symbols_to_csv
@@ -157,10 +157,11 @@ async def update_high_movement_stocks():
         return
     log("🚀 تحليل الأسهم ذات الحركة العالية...")
     try:
-        analyze_high_movement_stocks()
+        await asyncio.to_thread(analyze_high_movement_stocks)
         log("✅ تم تحديث أسهم الحركة العالية.")
     except Exception as e:
         log(f"❌ فشل تحليل الأسهم ذات الحركة العالية: {e}")
+
 
 async def track_targets(bot):
     log("🎯 متابعة لحظية للأسهم...")
