@@ -71,8 +71,10 @@ def filter_top_stocks_by_custom_rules(stock):
         if not (0 <= change <= 300):
             return False
         return True
-    except:
+    except Exception as e:
+        print(f"❌ خطأ في الفلترة: {e}")
         return False
+
 
 def analyze_high_movement_stocks():
     print("\U0001f680 جاري تحليل الأسهم ذات الحركة العالية...")
