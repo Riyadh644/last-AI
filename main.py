@@ -13,10 +13,11 @@ from telegram import Bot
 from modules.analyze_performance import generate_report_summary
 from modules.tv_data import (
     fetch_stocks_from_tradingview,
-    analyze_high_movement_stocks,
     analyze_single_stock,
     analyze_market
 )
+from modules.tv_data import analyze_high_movement_stocks_async as analyze_high_movement_stocks
+
 from modules.ml_model import train_model_daily
 from modules.symbols_updater import fetch_all_us_symbols, save_symbols_to_csv
 from modules.telegram_bot import start_telegram_bot
