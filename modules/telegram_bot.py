@@ -387,10 +387,11 @@ async def start_telegram_bot():
 
         print("✨ بوت التليجرام يعمل الآن!")
 
-        await app.initialize()        # تهيئة التطبيق
-        await app.start()              # بدء التشغيل
-        await app.run_polling()        # بدء استقبال الرسائل بشكل صحيح (بدل idle)
-
+        await app.initialize()
+        await app.start()
+        await app.updater.start_polling()  # ← أضف هذا السطر
+        await app.updater.idle()
+        
     except Exception as e:
         print(f"⚠️ خطأ في البوت: {e}")
         await asyncio.sleep(10)
