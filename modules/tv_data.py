@@ -272,3 +272,7 @@ def analyze_high_movement_stocks():
     print(f"✅ تم العثور على {len(high_movement)} سهم بحركة عالية.")
     print(f"📅 high_movement_stocks.json تم تحديثه في {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     return high_movement
+# ✅ نسخة غير موجودة وتم نسيان إضافتها
+async def analyze_high_movement_stocks_async():
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, analyze_high_movement_stocks)
