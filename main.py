@@ -6,7 +6,7 @@ import schedule
 import yfinance as yf
 import requests
 import nest_asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from telegram import Bot
 from modules.analyze_performance import generate_report_summary
@@ -47,10 +47,13 @@ def log(msg):
     print(msg)
     logging.info(msg)
 
+
 def is_market_open():
-    now = datetime.now(datetime.timezone.utc)
+    now = datetime.now(timezone.utc)  # ✅ تعديل
+    return now.weekday() < 5 and 13 <= now.hour <= 20
 
     return now.weekday() < 5 and 13 <= now.hour <= 20
+
 
 def is_market_weak():
     try:
