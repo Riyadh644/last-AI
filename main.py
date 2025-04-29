@@ -213,6 +213,7 @@ async def main():
     await update_pump_stocks()
     await update_high_movement_stocks()
 
+    # جدولة المهام
     schedule.every().day.at("00:00").do(lambda: asyncio.create_task(daily_model_training()))
     schedule.every().day.at("03:00").do(lambda: asyncio.create_task(update_symbols()))
     schedule.every(5).minutes.do(lambda: asyncio.create_task(update_market_data()))
@@ -224,10 +225,17 @@ async def main():
     schedule.every().day.at("20:00").do(lambda: asyncio.create_task(send_daily_report_task()))
     schedule.every().day.at("00:05").do(lambda: asyncio.create_task(clean_trade_history_task()))
 
+    async def keep_running_schedules():
+        while True:
+            schedule.run_pending()
+            await asyncio.sleep(30)
+
+    # 🔁 شغل البوت والمهام الدورية معًا
     await asyncio.gather(
         start_telegram_bot(),
-        run_scheduled_jobs(bot_instance)
+        keep_running_schedules()
     )
+
 
 if __name__ == "__main__":
     import sys
