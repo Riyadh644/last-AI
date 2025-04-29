@@ -195,7 +195,7 @@ async def daily_model_training():
     except Exception as e:
         log(f"❌ فشل تدريب النموذج: {e}")
 
-        
+
 async def run_scheduled_jobs(bot):
     while True:
         schedule.run_pending()
@@ -226,4 +226,9 @@ async def main():
     )
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    import sys
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
