@@ -19,11 +19,7 @@ from modules.tv_data import (
 )
 from modules.ml_model import train_model_daily
 from modules.symbols_updater import fetch_all_us_symbols, save_symbols_to_csv
-from modules.telegram_bot import (
-    start_telegram_bot,
-    compare_stock_lists_and_alert,
-    send_performance_report
-)
+from modules.telegram_bot import start_telegram_bot
 from modules.notifier import send_telegram_message
 from modules.pump_detector import detect_pump_stocks
 from modules.price_tracker import check_targets, clean_old_trades
@@ -120,12 +116,9 @@ async def update_market_data():
 
     log("📊 تحليل وتحديث السوق...")
     try:
-        if os.path.exists("data/top_stocks.json"):
-            shutil.copy("data/top_stocks.json", "data/top_stocks_old.json")
-        if os.path.exists("data/pump_stocks.json"):
-            shutil.copy("data/pump_stocks.json", "data/pump_stocks_old.json")
-        if os.path.exists("data/high_movement_stocks.json"):
-            shutil.copy("data/high_movement_stocks.json", "data/high_movement_stocks_old.json")
+        shutil.copy("data/top_stocks.json", "data/top_stocks_old.json") if os.path.exists("data/top_stocks.json") else None
+        shutil.copy("data/pump_stocks.json", "data/pump_stocks_old.json") if os.path.exists("data/pump_stocks.json") else None
+        shutil.copy("data/high_movement_stocks.json", "data/high_movement_stocks_old.json") if os.path.exists("data/high_movement_stocks.json") else None
 
         await asyncio.to_thread(analyze_market)
         log("✅ تم تحليل السوق بنجاح.")
@@ -169,18 +162,11 @@ async def track_targets(bot):
     except Exception as e:
         log(f"❌ خطأ في متابعة الأهداف: {e}")
 
-async def run_smart_alerts(bot):
-    log("🔔 فحص التغيرات في الأسهم...")
-    try:
-        await compare_stock_lists_and_alert(bot)
-    except Exception as e:
-        log(f"❌ فشل إرسال التنبيهات الذكية: {e}")
-
 async def send_daily_report_task():
     if is_market_open():
         log("⏸️ السوق مفتوح - تأجيل إرسال التقرير")
         return
-    await send_performance_report()
+    await generate_report_summary()
 
 async def clean_trade_history_task():
     clean_old_trades()
@@ -192,11 +178,6 @@ async def daily_model_training():
         log("✅ تم تدريب النموذج اليومي بنجاح.")
     except Exception as e:
         log(f"❌ فشل تدريب النموذج: {e}")
-
-async def run_scheduled_jobs(bot):
-    while True:
-        schedule.run_pending()
-        await asyncio.sleep(1)
 
 async def main():
     bot_instance = Bot(token=BOT_TOKEN)
@@ -212,7 +193,6 @@ async def main():
     schedule.every(5).minutes.do(lambda: asyncio.create_task(update_pump_stocks()))
     schedule.every(5).minutes.do(lambda: asyncio.create_task(update_high_movement_stocks()))
     schedule.every(5).minutes.do(lambda: asyncio.create_task(track_targets(bot_instance)))
-    schedule.every(5).minutes.do(lambda: asyncio.create_task(run_smart_alerts(bot_instance)))
     schedule.every(10).minutes.do(watch_positive_news_stocks)
     schedule.every().day.at("20:00").do(lambda: asyncio.create_task(send_daily_report_task()))
     schedule.every().day.at("00:05").do(lambda: asyncio.create_task(clean_trade_history_task()))
