@@ -266,12 +266,18 @@ def analyze_high_movement_stocks():
         except Exception as e:
             print(f"❌ خطأ في تحليل سهم {stock.get('symbol')}: {e}")
 
+    # ✅ إزالة التكرار اليومي
+    old_high = load_json("data/high_movement_stocks_old.json")
+    high_movement = remove_duplicates_today(high_movement, old_high)
+
     save_json(HIGH_MOVEMENT_FILE, high_movement[:5])
     save_daily_history(high_movement, "high_movement_stocks")
 
     print(f"✅ تم العثور على {len(high_movement)} سهم بحركة عالية.")
     print(f"📅 high_movement_stocks.json تم تحديثه في {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     return high_movement
+
+
 # ✅ نسخة غير موجودة وتم نسيان إضافتها
 async def analyze_high_movement_stocks_async():
     loop = asyncio.get_event_loop()
