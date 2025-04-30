@@ -176,6 +176,8 @@ def compare_stock_lists_and_alert(old_file, new_file, label):
                 print(f"📛 تم تجاهل {symbol} - تم التنبيه عنه مسبقًا اليوم.")
     print(f"🔔 تم إرسال {alerts_sent} تنبيه جديد.")
 
+import time
+
 async def check_cross_list_movements(bot):
     def load_symbols_safe(path):
         if os.path.exists(path):
@@ -188,27 +190,41 @@ async def check_cross_list_movements(bot):
                 print(f"⚠️ خطأ أثناء قراءة {path}: {e}")
         return set()
 
-    # ✅ قمنا بالفصل بين الرموز القديمة والجديدة
-    old_symbols = {
-        "🌀 أقوى": load_symbols_safe("data/top_stocks_old.json"),
-        "💥 انفجار": load_symbols_safe("data/pump_stocks_old.json"),
-        "🚀 حركة": load_symbols_safe("data/high_movement_stocks_old.json"),
-    }
+    def is_significant_time_diff(old_path, new_path, threshold_minutes=10):
+        if not os.path.exists(old_path) or not os.path.exists(new_path):
+            return False
+        old_time = os.path.getmtime(old_path)
+        new_time = os.path.getmtime(new_path)
+        return (new_time - old_time) > threshold_minutes * 60
 
-    new_symbols = {
-        "🌀 أقوى": load_symbols_safe("data/top_stocks.json"),
-        "💥 انفجار": load_symbols_safe("data/pump_stocks.json"),
-        "🚀 حركة": load_symbols_safe("data/high_movement_stocks.json"),
-    }
+    categories = [
+        ("🌀 أقوى", "data/top_stocks_old.json", "data/top_stocks.json"),
+        ("💥 انفجار", "data/pump_stocks_old.json", "data/pump_stocks.json"),
+        ("🚀 حركة", "data/high_movement_stocks_old.json", "data/high_movement_stocks.json"),
+    ]
 
-    # ✅ لا تستعمل .keys() ولا تعتمد على category structure القديم
+    old_symbols = {}
+    new_symbols = {}
+
+    for label, old_file, new_file in categories:
+        if is_significant_time_diff(old_file, new_file):
+            old_symbols[label] = load_symbols_safe(old_file)
+            new_symbols[label] = load_symbols_safe(new_file)
+        else:
+            print(f"⏸️ تجاهل مقارنة {label} (تم التحديث مؤخرًا < 10 دقائق)")
+
+    notified = set()
     for to_label in new_symbols:
         for from_label in old_symbols:
             if from_label == to_label:
                 continue
             moved = new_symbols[to_label] & old_symbols[from_label]
             for symbol in moved:
+                if symbol in notified:
+                    continue
                 await notify_moved_stock(bot, symbol, from_label, to_label)
+                notified.add(symbol)
+
 
 async def safe_send_message(bot, chat_id, text, retries=3, delay=5):
     max_len = 4000
