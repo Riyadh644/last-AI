@@ -22,13 +22,9 @@ from modules.notifier import send_telegram_message
 from modules.ml_model import train_model_daily
 from modules.symbols_updater import fetch_all_us_symbols, save_symbols_to_csv
 from modules.telegram_bot import start_telegram_bot
-from modules.notifier import send_telegram_message
+from modules.notifier import notify_new_stock, compare_stock_lists_and_alert, check_cross_list_movements
 from modules.pump_detector import detect_pump_stocks
 from modules.price_tracker import check_targets, clean_old_trades
-from modules.notifier import notify_new_stock
-from datetime import datetime, timedelta, timezone
-
-
 
 nest_asyncio.apply()
 
@@ -50,10 +46,8 @@ def log(msg):
 
 def is_market_open():
     now = datetime.now(timezone.utc) + timedelta(hours=3)
-  # تحويل التوقيت إلى السعودية
     if now.weekday() >= 5:
-        return False  # السبت أو الأحد
-    # السوق يفتح من 11 صباحًا (Pre-Market) إلى 12 ليلًا (23:59)
+        return False
     return 11 <= now.hour < 24
 
 def is_market_weak():
@@ -116,15 +110,13 @@ def watch_positive_news_stocks():
     except Exception as e:
         log(f"❌ فشل في مراقبة الأخبار الإيجابية: {e}")
 
-async def update_market_data():
+async def update_market_data(bot):
     if not is_market_open():
         log("⏸️ السوق مغلق - إلغاء التحديث")
         return
 
     log("📊 تحليل وتحديث السوق...")
-
     try:
-        # ⬅️ نسخ الملفات القديمة قبل التحليل
         if os.path.exists("data/top_stocks.json"):
             shutil.copy("data/top_stocks.json", "data/top_stocks_old.json")
         if os.path.exists("data/pump_stocks.json"):
@@ -132,16 +124,14 @@ async def update_market_data():
         if os.path.exists("data/high_movement_stocks.json"):
             shutil.copy("data/high_movement_stocks.json", "data/high_movement_stocks_old.json")
 
-        await asyncio.to_thread(analyze_market)
+        await analyze_market()
         log("✅ تم تحليل السوق بنجاح.")
 
-        # ⬅️ إرسال تنبيهات الأسهم القوية الجديدة
-        from modules.notifier import compare_stock_lists_and_alert
         compare_stock_lists_and_alert("data/top_stocks_old.json", "data/top_stocks.json", "🌀 سهم قوي جديد:")
+        await check_cross_list_movements(bot)
 
     except Exception as e:
         log(f"❌ فشل تحليل السوق: {e}")
-
 
 async def update_symbols():
     log("🔁 تحديث رموز السوق...")
@@ -163,10 +153,7 @@ async def update_pump_stocks():
         detect_pump_stocks()
         log("✅ تم تحديث أسهم الانفجار.")
 
-        from modules.notifier import compare_stock_lists_and_alert
         compare_stock_lists_and_alert("data/pump_stocks_old.json", "data/pump_stocks.json", "💥 سهم انفجاري جديد:")
-    except Exception as e:
-        log(f"❌ فشل تحليل الانفجارات: {e}")
     except Exception as e:
         log(f"❌ فشل تحليل الانفجارات: {e}")
 
@@ -180,13 +167,9 @@ async def update_high_movement_stocks():
         await asyncio.to_thread(analyze_high_movement_stocks)
         log("✅ تم تحديث أسهم الحركة العالية.")
 
-        from modules.notifier import compare_stock_lists_and_alert
         compare_stock_lists_and_alert("data/high_movement_stocks_old.json", "data/high_movement_stocks.json", "🚀 سهم نشط جديد:")
     except Exception as e:
         log(f"❌ فشل تحليل الأسهم ذات الحركة العالية: {e}")
-    except Exception as e:
-        log(f"❌ فشل تحليل الأسهم ذات الحركة العالية: {e}")
-
 
 async def track_targets(bot):
     log("🎯 متابعة لحظية للأسهم...")
@@ -216,13 +199,13 @@ async def main():
     bot_instance = Bot(token=BOT_TOKEN)
 
     await daily_model_training()
-    await update_market_data()
+    await update_market_data(bot_instance)
     await update_pump_stocks()
     await update_high_movement_stocks()
 
     schedule.every().day.at("00:00").do(lambda: asyncio.create_task(daily_model_training()))
     schedule.every().day.at("03:00").do(lambda: asyncio.create_task(update_symbols()))
-    schedule.every(5).minutes.do(lambda: asyncio.create_task(update_market_data()))
+    schedule.every(5).minutes.do(lambda: asyncio.create_task(update_market_data(bot_instance)))
     schedule.every(5).minutes.do(lambda: asyncio.create_task(update_pump_stocks()))
     schedule.every(5).minutes.do(lambda: asyncio.create_task(update_high_movement_stocks()))
     schedule.every(5).minutes.do(lambda: asyncio.create_task(track_targets(bot_instance)))
@@ -240,8 +223,8 @@ async def main():
         keep_running_schedules()
     )
 
-
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
-
+    import nest_asyncio
+    nest_asyncio.apply()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())

@@ -2,37 +2,28 @@
   {
     "symbol": "DMN",
     "price": 0.01,
-    "change%": 87.5,
-    "volume": 2966460000,
-    "avg_volume": 290308440,
-    "rsi": 35.48,
-    "timestamp": "2025-04-30T19:10:02.476514"
+    "change%": 100.0,
+    "volume": 2966539300,
+    "avg_volume": 290309761,
+    "rsi": 37.5,
+    "timestamp": "2025-04-30T23:13:57.370444"
   },
   {
     "symbol": "IVF",
-    "price": 2.76,
-    "change%": 71.47,
-    "volume": 65787059,
-    "avg_volume": 1214552,
-    "rsi": 65.57,
-    "timestamp": "2025-04-30T19:10:04.027451"
-  },
-  {
-    "symbol": "JFBR",
-    "price": 1.23,
-    "change%": 44.47,
-    "volume": 82999119,
-    "avg_volume": 1704076,
-    "rsi": 63.78,
-    "timestamp": "2025-04-30T19:10:03.678109"
+    "price": 2.39,
+    "change%": 48.45,
+    "volume": 81730180,
+    "avg_volume": 1480399,
+    "rsi": 61.22,
+    "timestamp": "2025-04-30T23:13:59.126918"
   },
   {
     "symbol": "FRGT",
-    "price": 1.17,
-    "change%": 16.98,
-    "volume": 24905023,
-    "avg_volume": 1867172,
-    "rsi": 67.33,
-    "timestamp": "2025-04-30T19:10:05.159492"
+    "price": 1.24,
+    "change%": 24.0,
+    "volume": 27415658,
+    "avg_volume": 1909015,
+    "rsi": 69.57,
+    "timestamp": "2025-04-30T23:14:01.730336"
   }
 ]

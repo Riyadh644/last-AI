@@ -83,7 +83,7 @@ def remove_duplicates_today(new_list, old_list):
     old_symbols = [x['symbol'] for x in old_list]
     return [stock for stock in new_list if stock['symbol'] not in old_symbols]
 
-def analyze_market():
+async def analyze_market():
     print("📊 جاري تحليل السوق...")
     model = load_model()
     stocks = fetch_stocks_from_tradingview()
@@ -98,21 +98,17 @@ def analyze_market():
             vol = stock["vol"]
             mcap = stock["market_cap"]
 
-            # Ignore huge market caps or invalid data
             if not isinstance(mcap, (int, float)) or mcap > 3_200_000_000:
                 continue
-
-            # New strict rule: must move at least 3% recently
             if change < 3:
                 continue
-
             if not filter_top_stocks_by_custom_rules(stock):
                 continue
-
             if had_recent_losses(symbol): continue
             if was_seen_recently(symbol): continue
 
-            data = fetch_data_from_tradingview(symbol)
+            # ✅ تعديل: استدعاء fetch_data بشكل عادي (ليس async)
+            data = await asyncio.to_thread(fetch_data_from_tradingview, symbol)
             if not data: continue
 
             is_green = data["close"] > data["open"]
@@ -145,7 +141,6 @@ def analyze_market():
         except Exception as e:
             print(f"❌ تحليل {stock.get('symbol', 'UNKNOWN')} فشل: {e}")
 
-    # إزالة التكرار اليومي
     old_top = load_json("data/top_stocks_old.json")
     old_pump = load_json("data/pump_stocks_old.json")
     top_stocks = remove_duplicates_today(top_stocks, old_top)
@@ -154,18 +149,14 @@ def analyze_market():
     top_stocks = sorted(top_stocks, key=lambda x: x["score"], reverse=True)[:3]
     pump_stocks = sorted(pump_stocks, key=lambda x: x["score"], reverse=True)[:3]
 
-    save_json(TOP_STOCKS_FILE, top_stocks)
-    save_json(PUMP_FILE, pump_stocks)
+    save_json("data/top_stocks.json", top_stocks)
+    save_json("data/pump_stocks.json", pump_stocks)
 
     save_daily_history(top_stocks, "top_stocks")
     save_daily_history(pump_stocks, "pump_stocks")
 
     print(f"✅ تحليل مكتمل: {len(top_stocks)} أقوى، {len(pump_stocks)} انفجار.")
     print(f"📅 top_stocks.json تم تحديثه في {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    return top_stocks + pump_stocks
-
-# تابع بقية الدوال كما هي بدون تعديل
-# (convert_np, save_json, save_daily_history, fetch_data_from_tradingview, analyze_single_stock)
 
 
 def convert_np(o):
