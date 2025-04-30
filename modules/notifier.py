@@ -188,6 +188,7 @@ async def check_cross_list_movements(bot):
                 print(f"⚠️ خطأ أثناء قراءة {path}: {e}")
         return set()
 
+    # ✅ قمنا بالفصل بين الرموز القديمة والجديدة
     old_symbols = {
         "🌀 أقوى": load_symbols_safe("data/top_stocks_old.json"),
         "💥 انفجار": load_symbols_safe("data/pump_stocks_old.json"),
@@ -200,18 +201,14 @@ async def check_cross_list_movements(bot):
         "🚀 حركة": load_symbols_safe("data/high_movement_stocks.json"),
     }
 
-    notified = set()
+    # ✅ لا تستعمل .keys() ولا تعتمد على category structure القديم
     for to_label in new_symbols:
         for from_label in old_symbols:
             if from_label == to_label:
                 continue
             moved = new_symbols[to_label] & old_symbols[from_label]
             for symbol in moved:
-                if symbol in notified:
-                    continue
                 await notify_moved_stock(bot, symbol, from_label, to_label)
-                notified.add(symbol)
-
 
 async def safe_send_message(bot, chat_id, text, retries=3, delay=5):
     max_len = 4000
