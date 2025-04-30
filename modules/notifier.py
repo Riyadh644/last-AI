@@ -7,7 +7,10 @@ from telegram import ReplyKeyboardMarkup
 from datetime import datetime
 from modules.alert_tracker import is_new_alert
 from telegram.error import NetworkError
+from datetime import datetime
+import pytz
 
+KSA = pytz.timezone("Asia/Riyadh")
 
 BOT_TOKEN = "7326658749:AAFqhl8U5t_flhDhr2prAzfjZtEdcCKYdsg"
 USERS_FILE = "data/users.json"
@@ -62,7 +65,8 @@ async def notify_new_stock(bot, stock, list_type):
 📊 <b>القوة:</b> {stock.get('score', 0):.2f}%
 🔄 <b>الحجم:</b> {stock['vol']:,}
 🔼 <b>الهدف:</b> {stock['close']*1.1:.2f} $
-⏳ <b>الوقت:</b> {datetime.now().strftime("%H:%M")}
+⏳ <b>الوقت:</b> {datetime.now(KSA).strftime("%H:%M")}
+
 """
     elif list_type == "pump":
         message = f"""
@@ -93,7 +97,7 @@ async def notify_moved_stock(bot, symbol, from_list, to_list):
 🔄 <code>{symbol}</code>
 📥 <b>من:</b> {from_list}
 📤 <b>إلى:</b> {to_list}
-⏳ <b>الوقت:</b> {datetime.now().strftime("%H:%M")}
+⏳ <b>الوقت:</b> {datetime.now(KSA).strftime("%H:%M")}
 """
     await broadcast_message(bot, message.strip())
 
@@ -125,7 +129,8 @@ async def notify_stop_loss(bot, stock):
 📉 <b>انخفاض:</b> {stock['distance_to_sl']:.2f} %
 💸 <b>الوقف:</b> {stock['stop_loss_price']:.2f} $
 🚨 <b>الإجراء:</b> اخرج فورًا
-🕒 <b>الوقت:</b> {datetime.now().strftime("%H:%M")}
+🕒 <b>الوقت:</b> {datetime.now(KSA).strftime("%H:%M")
+}
 """
     await broadcast_message(bot, message.strip())
 
