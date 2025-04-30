@@ -45,8 +45,11 @@ def log(msg):
     logging.info(msg)
 
 def is_market_open():
-    now = datetime.now(timezone.utc)
-    return now.weekday() < 5 and 13 <= now.hour <= 20
+    now = datetime.utcnow() + timedelta(hours=3)  # تحويل التوقيت إلى السعودية
+    if now.weekday() >= 5:
+        return False  # السبت أو الأحد
+    # السوق يفتح من 11 صباحًا (Pre-Market) إلى 12 ليلًا (23:59)
+    return 11 <= now.hour < 24
 
 def is_market_weak():
     try:

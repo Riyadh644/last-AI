@@ -3,13 +3,17 @@ import os
 import yfinance as yf
 from datetime import datetime
 from modules.notifier import notify_target_hit, notify_stop_loss
+from datetime import datetime, timedelta
+
 
 TRADE_HISTORY_FILE = "data/trade_history.json"
 
 def is_market_open():
-    """التأكد أن السوق الأمريكي مفتوح"""
-    now = datetime.utcnow()
-    return now.weekday() < 5 and 13 <= now.hour <= 20  # توقيت UTC للسوق الأمريكي
+    """التأكد أن السوق الأمريكي مفتوح (يشمل Pre-Market)"""
+    now = datetime.utcnow() + timedelta(hours=3)  # توقيت السعودية
+    if now.weekday() >= 5:
+        return False  # عطلة نهاية الأسبوع
+    return 11 <= now.hour < 24  # من 11 صباحًا حتى 12 منتصف الليل
 
 def is_today(timestamp_str):
     """تحقق أن السهم مضاف اليوم فقط"""
