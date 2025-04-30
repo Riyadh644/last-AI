@@ -28,6 +28,8 @@ def get_all_user_ids():
 
 def send_telegram_message(message):
     chat_ids = get_all_user_ids()
+    print("📨 المحاولة لإرسال التنبيه إلى:", chat_ids)
+
     for chat_id in chat_ids:
         url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
         payload = {
@@ -39,6 +41,8 @@ def send_telegram_message(message):
             requests.post(url, json=payload, timeout=10)
         except Exception as e:
             print(f"❌ فشل إرسال الرسالة إلى {chat_id}: {e}")
+
+            
 
 async def safe_send_message(bot, chat_id, text, retries=3, delay=5):
     max_len = 4000
@@ -192,5 +196,7 @@ def compare_stock_lists_and_alert(old_file, new_file, label):
             message = f"{label} <b>{symbol}</b>"
             send_telegram_message(message)
             alerts_sent += 1
-
+        if not isinstance(stock, dict):
+         continue  # تجاهل أي عنصر غير قاموس
+    symbol = stock.get("symbol")
     print(f"🔔 تم إرسال {alerts_sent} تنبيه جديد.")
