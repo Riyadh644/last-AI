@@ -4,6 +4,8 @@ import yfinance as yf
 from datetime import datetime
 from modules.notifier import notify_target_hit, notify_stop_loss
 from datetime import datetime, timedelta
+from modules.notifier import notify_new_stock
+
 
 
 TRADE_HISTORY_FILE = "data/trade_history.json"

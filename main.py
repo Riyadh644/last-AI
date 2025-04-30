@@ -25,6 +25,10 @@ from modules.telegram_bot import start_telegram_bot
 from modules.notifier import send_telegram_message
 from modules.pump_detector import detect_pump_stocks
 from modules.price_tracker import check_targets, clean_old_trades
+from modules.notifier import notify_new_stock
+from datetime import datetime, timedelta, timezone
+
+
 
 nest_asyncio.apply()
 
@@ -45,7 +49,8 @@ def log(msg):
     logging.info(msg)
 
 def is_market_open():
-    now = datetime.utcnow() + timedelta(hours=3)  # تحويل التوقيت إلى السعودية
+    now = datetime.now(timezone.utc) + timedelta(hours=3)
+  # تحويل التوقيت إلى السعودية
     if now.weekday() >= 5:
         return False  # السبت أو الأحد
     # السوق يفتح من 11 صباحًا (Pre-Market) إلى 12 ليلًا (23:59)
@@ -115,9 +120,6 @@ async def update_market_data():
     if not is_market_open():
         log("⏸️ السوق مغلق - إلغاء التحديث")
         return
-    if is_market_weak():
-        log("⚠️ السوق ضعيف (SPY < -1%). تم إلغاء التوصيات.")
-        return
 
     log("📊 تحليل وتحديث السوق...")
 
@@ -137,8 +139,6 @@ async def update_market_data():
         from modules.notifier import compare_stock_lists_and_alert
         compare_stock_lists_and_alert("data/top_stocks_old.json", "data/top_stocks.json", "🌀 سهم قوي جديد:")
 
-    except Exception as e:
-        log(f"❌ فشل تحليل السوق: {e}")
     except Exception as e:
         log(f"❌ فشل تحليل السوق: {e}")
 
@@ -240,25 +240,8 @@ async def main():
         keep_running_schedules()
     )
 
+
 if __name__ == "__main__":
-    import sys
+    import asyncio
+    asyncio.run(main())
 
-    if sys.platform == "win32":
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            print("🔁 الحلقة تعمل بالفعل، تشغيل المهمة داخلها...")
-            loop.create_task(main())
-        else:
-            loop.run_until_complete(main())
-    except RuntimeError as e:
-        print(f"❌ خطأ في الحلقة: {e}")
-if __name__ == "__main__":
-    import sys
-
-    if sys.platform == "win32":
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
-    asyncio.run(main())  # ✅ سطر واحد بسيط وآمن
