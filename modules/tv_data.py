@@ -7,7 +7,6 @@ from modules.ml_model import load_model, predict_buy_signal
 from modules.history_tracker import was_seen_recently, had_recent_losses
 from modules.notifier import send_telegram_message
 import asyncio
-from modules.notifier import send_telegram_message
 
 
 TOP_STOCKS_FILE = "data/top_stocks.json"
@@ -85,7 +84,7 @@ def remove_duplicates_today(new_list, old_list):
     return [stock for stock in new_list if stock['symbol'] not in old_symbols]
 
 def analyze_market():
-    print("\ud83d\udcca \u062c\u0627\u0631\u064a \u062a\u062d\u0644\u064a\u0644 \u0627\u0644\u0633\u0648\u0642...")
+    print("📊 جاري تحليل السوق...")
     model = load_model()
     stocks = fetch_stocks_from_tradingview()
 
@@ -94,7 +93,17 @@ def analyze_market():
     for stock in stocks:
         try:
             symbol = stock["symbol"].upper()
-            if not isinstance(stock["market_cap"], (int, float)) or stock["market_cap"] > 3_200_000_000:
+            price = stock["close"]
+            change = stock["change"]
+            vol = stock["vol"]
+            mcap = stock["market_cap"]
+
+            # Ignore huge market caps or invalid data
+            if not isinstance(mcap, (int, float)) or mcap > 3_200_000_000:
+                continue
+
+            # New strict rule: must move at least 3% recently
+            if change < 3:
                 continue
 
             if not filter_top_stocks_by_custom_rules(stock):
@@ -109,34 +118,34 @@ def analyze_market():
             is_green = data["close"] > data["open"]
             rsi_ok = data["RSI"] and data["RSI"] > 50
             macd_ok = data["MACD"] and data["MACD_signal"] and data["MACD"] > data["MACD_signal"]
-            volume_ok = stock["vol"] > 1_000_000
+            volume_ok = vol > 1_000_000
 
             if not (is_green and rsi_ok and macd_ok and volume_ok):
                 continue
 
             features = {
-                "ma10": stock["close"],
-                "ma30": stock["close"],
-                "vol": stock["vol"],
-                "avg_vol": stock["vol"],
-                "change": stock["change"],
-                "close": stock["close"]
+                "ma10": price,
+                "ma30": price,
+                "vol": vol,
+                "avg_vol": vol,
+                "change": change,
+                "close": price
             }
 
             score = predict_buy_signal(model, features)
             stock["score"] = score
-            print(f"\ud83d\udd0d {symbol} → Score: {score:.2f}%")
+            print(f"🔍 {symbol} → Score: {score:.2f}%")
 
             if score >= 25:
                 top_stocks.append(stock)
 
-            if stock["change"] > 25 and stock["vol"] > stock["market_cap"]:
+            if change > 25 and vol > mcap:
                 pump_stocks.append(stock)
 
         except Exception as e:
-            print(f"\u274c \u062a\u062d\u0644\u064a\u0644 {stock.get('symbol', 'UNKNOWN')} \u0641\u0634\u0644: {e}")
+            print(f"❌ تحليل {stock.get('symbol', 'UNKNOWN')} فشل: {e}")
 
-    # ازالة التكرار اليومي
+    # إزالة التكرار اليومي
     old_top = load_json("data/top_stocks_old.json")
     old_pump = load_json("data/pump_stocks_old.json")
     top_stocks = remove_duplicates_today(top_stocks, old_top)
@@ -151,8 +160,8 @@ def analyze_market():
     save_daily_history(top_stocks, "top_stocks")
     save_daily_history(pump_stocks, "pump_stocks")
 
-    print(f"\n\u2705 \u062a\u062d\u0644\u064a\u0644 \u0645\u0643\u062a\u0645\u0644: {len(top_stocks)} \u0623\u0642\u0648\u0649، {len(pump_stocks)} \u0627\u0646\u0641\u062c\u0627\u0631.")
-    print(f"\ud83d\udcc5 top_stocks.json \u062a\u0645 \u062a\u062d\u062f\u064a\u062b\u0647 \u0641\u064a {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"✅ تحليل مكتمل: {len(top_stocks)} أقوى، {len(pump_stocks)} انفجار.")
+    print(f"📅 top_stocks.json تم تحديثه في {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     return top_stocks + pump_stocks
 
 # تابع بقية الدوال كما هي بدون تعديل
