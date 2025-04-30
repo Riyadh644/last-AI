@@ -7,6 +7,8 @@ from modules.ml_model import load_model, predict_buy_signal
 from modules.history_tracker import was_seen_recently, had_recent_losses
 from modules.notifier import send_telegram_message
 import asyncio
+from modules.notifier import send_telegram_message
+
 
 TOP_STOCKS_FILE = "data/top_stocks.json"
 WATCHLIST_FILE = "data/watchlist.json"

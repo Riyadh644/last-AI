@@ -17,6 +17,7 @@ from modules.tv_data import (
     analyze_market
 )
 from modules.tv_data import analyze_high_movement_stocks
+from modules.notifier import send_telegram_message
 
 from modules.ml_model import train_model_daily
 from modules.symbols_updater import fetch_all_us_symbols, save_symbols_to_csv
@@ -118,7 +119,7 @@ async def update_market_data():
     log("📊 تحليل وتحديث السوق...")
 
     try:
-        # ⬅️ انقل هذه النسخ إلى الأعلى قبل التحليل
+        # ⬅️ نسخ الملفات القديمة قبل التحليل
         if os.path.exists("data/top_stocks.json"):
             shutil.copy("data/top_stocks.json", "data/top_stocks_old.json")
         if os.path.exists("data/pump_stocks.json"):
@@ -128,6 +129,13 @@ async def update_market_data():
 
         await asyncio.to_thread(analyze_market)
         log("✅ تم تحليل السوق بنجاح.")
+
+        # ⬅️ إرسال تنبيهات الأسهم القوية الجديدة
+        from modules.notifier import compare_stock_lists_and_alert
+        compare_stock_lists_and_alert("data/top_stocks_old.json", "data/top_stocks.json", "🌀 سهم قوي جديد:")
+
+    except Exception as e:
+        log(f"❌ فشل تحليل السوق: {e}")
     except Exception as e:
         log(f"❌ فشل تحليل السوق: {e}")
 
@@ -147,8 +155,15 @@ async def update_pump_stocks():
         return
     log("💣 تحليل الانفجارات السعرية...")
     try:
+        if os.path.exists("data/pump_stocks.json"):
+            shutil.copy("data/pump_stocks.json", "data/pump_stocks_old.json")
         detect_pump_stocks()
         log("✅ تم تحديث أسهم الانفجار.")
+
+        from modules.notifier import compare_stock_lists_and_alert
+        compare_stock_lists_and_alert("data/pump_stocks_old.json", "data/pump_stocks.json", "💥 سهم انفجاري جديد:")
+    except Exception as e:
+        log(f"❌ فشل تحليل الانفجارات: {e}")
     except Exception as e:
         log(f"❌ فشل تحليل الانفجارات: {e}")
 
@@ -157,8 +172,15 @@ async def update_high_movement_stocks():
         return
     log("🚀 تحليل الأسهم ذات الحركة العالية...")
     try:
+        if os.path.exists("data/high_movement_stocks.json"):
+            shutil.copy("data/high_movement_stocks.json", "data/high_movement_stocks_old.json")
         await asyncio.to_thread(analyze_high_movement_stocks)
         log("✅ تم تحديث أسهم الحركة العالية.")
+
+        from modules.notifier import compare_stock_lists_and_alert
+        compare_stock_lists_and_alert("data/high_movement_stocks_old.json", "data/high_movement_stocks.json", "🚀 سهم نشط جديد:")
+    except Exception as e:
+        log(f"❌ فشل تحليل الأسهم ذات الحركة العالية: {e}")
     except Exception as e:
         log(f"❌ فشل تحليل الأسهم ذات الحركة العالية: {e}")
 

@@ -1,4 +1,4 @@
-# ✅ notifier.py
+
 import requests
 import json
 import os
@@ -6,6 +6,7 @@ import asyncio
 from telegram.error import NetworkError
 from telegram import ReplyKeyboardMarkup
 from datetime import datetime
+
 
 BOT_TOKEN = "7326658749:AAFqhl8U5t_flhDhr2prAzfjZtEdcCKYdsg"
 USERS_FILE = "data/users.json"
@@ -16,6 +17,14 @@ keyboard = [
     ["🔄 تحديث الآن", "📊 تقرير يومي"]
 ]
 markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+# === Basic Functions ===
+
+def load_json(path):
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
 
 def get_all_user_ids():
     if os.path.exists(USERS_FILE):
@@ -37,6 +46,34 @@ def send_telegram_message(message):
             requests.post(url, json=payload, timeout=10)
         except Exception as e:
             print(f"❌ فشل إرسال الرسالة إلى {chat_id}: {e}")
+
+# === Alerting System ===
+
+def compare_stock_lists_and_alert(old_file, new_file, label):
+    def load_symbols(path):
+        if not os.path.exists(path):
+            return []
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return [x["symbol"] for x in data]
+
+    old_symbols = set(load_symbols(old_file))
+    new_data = []
+    if os.path.exists(new_file):
+        with open(new_file, "r", encoding="utf-8") as f:
+            new_data = json.load(f)
+
+    alerts_sent = 0
+    for stock in new_data:
+        symbol = stock.get("symbol")
+        if symbol and symbol not in old_symbols:
+            message = f"{label} <b>{symbol}</b>"
+            send_telegram_message(message)
+            alerts_sent += 1
+
+    print(f"🔔 تم إرسال {alerts_sent} تنبيه جديد.")
+
+# === Async Messaging for Live Bot Use ===
 
 async def safe_send_message(bot, chat_id, text, retries=3, delay=5):
     max_len = 4000
@@ -63,11 +100,7 @@ async def broadcast_message(bot, text):
     for chat_id in users:
         await safe_send_message(bot, chat_id, text)
 
-def load_json(path):
-    if os.path.exists(path):
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return []
+# === Alerts ===
 
 async def notify_new_stock(bot, stock, list_type):
     if list_type == "top":
@@ -103,37 +136,6 @@ async def notify_new_stock(bot, stock, list_type):
 """
     await broadcast_message(bot, message.strip())
 
-async def compare_stock_lists_and_alert(bot):
-    print("🔔 جاري فحص التغيرات في الأسهم...")
-
-    def load_json_safe(path):
-        return json.load(open(path, encoding='utf-8')) if os.path.exists(path) else []
-
-    old_top = load_json_safe("data/top_stocks_old.json")
-    new_top = load_json_safe("data/top_stocks.json")
-
-    old_pump = load_json_safe("data/pump_stocks_old.json")
-    new_pump = load_json_safe("data/pump_stocks.json")
-
-    old_high = load_json_safe("data/high_movement_stocks_old.json")
-    new_high = load_json_safe("data/high_movement_stocks.json")
-
-    sections = [
-        ("top", new_top, old_top),
-        ("pump", new_pump, old_pump),
-        ("high_movement", new_high, old_high),
-    ]
-
-    for list_type, new_list, old_list in sections:
-        new_symbols = {x['symbol'] for x in new_list}
-        old_symbols = {x['symbol'] for x in old_list}
-
-        added_symbols = new_symbols - old_symbols
-        for stock in new_list:
-            if stock['symbol'] in added_symbols:
-                await notify_new_stock(bot, stock, list_type)
-
-
 async def notify_target_hit(bot, stock, target_type):
     if target_type == "target1":
         message = f"""
@@ -156,7 +158,6 @@ async def notify_target_hit(bot, stock, target_type):
 ⏳ <b>المدة:</b> {stock.get('duration', 'N/A')}
 """
     await broadcast_message(bot, message.strip())
-
 
 async def notify_stop_loss(bot, stock):
     message = f"""

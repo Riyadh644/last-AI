@@ -8,6 +8,8 @@ from modules.notifier import safe_send_message, compare_stock_lists_and_alert
 import json
 import os
 from datetime import datetime
+from modules.notifier import send_telegram_message
+
 
 keyboard = [
     ["🌀 أقوى الأسهم", "💥 أسهم انفجارية"],
