@@ -6,9 +6,9 @@ from telegram.error import NetworkError
 from telegram import ReplyKeyboardMarkup
 from datetime import datetime
 from modules.alert_tracker import is_new_alert
-from telegram.error import NetworkError
 from datetime import datetime
 import pytz
+import time
 
 KSA = pytz.timezone("Asia/Riyadh")
 
@@ -129,8 +129,8 @@ async def notify_stop_loss(bot, stock):
 📉 <b>انخفاض:</b> {stock['distance_to_sl']:.2f} %
 💸 <b>الوقف:</b> {stock['stop_loss_price']:.2f} $
 🚨 <b>الإجراء:</b> اخرج فورًا
-🕒 <b>الوقت:</b> {datetime.now(KSA).strftime("%H:%M")
-}
+🕒 <b>الوقت:</b> {datetime.now(KSA).strftime("%H:%M")}
+
 """
     await broadcast_message(bot, message.strip())
 
@@ -174,9 +174,7 @@ def compare_stock_lists_and_alert(old_file, new_file, label):
                 alerts_sent += 1
             else:
                 print(f"📛 تم تجاهل {symbol} - تم التنبيه عنه مسبقًا اليوم.")
-    print(f"🔔 تم إرسال {alerts_sent} تنبيه جديد.")
 
-import time
 
 async def check_cross_list_movements(bot):
     def load_symbols_safe(path):
