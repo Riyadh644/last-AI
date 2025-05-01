@@ -9,6 +9,7 @@ import json
 import os
 from datetime import datetime
 from modules.notifier import send_telegram_message
+from modules.notifier import compare_stock_lists_and_alert
 
 
 keyboard = [
@@ -187,7 +188,9 @@ async def analyze_stock(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def update_symbols_now(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await safe_send_message(update.get_bot(), update.effective_chat.id, "🔄 جاري تحديث البيانات...")
     try:
-        await compare_stock_lists_and_alert(update.get_bot())
+        compare_stock_lists_and_alert("data/top_stocks_old.json", "data/top_stocks.json", "🌀 سهم قوي جديد:")
+        compare_stock_lists_and_alert("data/pump_stocks_old.json", "data/pump_stocks.json", "💥 سهم انفجاري جديد:")
+        compare_stock_lists_and_alert("data/high_movement_stocks_old.json", "data/high_movement_stocks.json", "🚀 سهم نشط جديد:")
         await safe_send_message(update.get_bot(), update.effective_chat.id, "✨ تم التحديث بنجاح!")
     except Exception as e:
         await safe_send_message(update.get_bot(), update.effective_chat.id, f"⚠ فشل التحديث: {e}")
